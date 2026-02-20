@@ -8,7 +8,11 @@ service = "cf-grpc-proxy"
 
 [vars]
 AUTH_WORKER_ORIGIN = "https://auth.mtamaramu.com"
-ALLOWED_REDIRECT_ORIGINS = "https://carins.mtamaramu.com,https://nuxt-pwa-carins.workers.dev,https://ohishi2.mtamaramu.com,https://nuxt-dtako-logs.m-tama-ramu.workers.dev"
+ALLOWED_REDIRECT_ORIGINS = "https://carins.mtamaramu.com,https://nuxt-pwa-carins.mtamaramu.com,https://nuxt-pwa-carins.workers.dev,https://ohishi2.mtamaramu.com,https://nuxt-dtako-logs.m-tama-ramu.workers.dev"
+
+[[routes]]
+pattern = "auth.mtamaramu.com"
+custom_domain = true
 
 # Secrets (set via `wrangler secret put`):
 # GOOGLE_CLIENT_ID
