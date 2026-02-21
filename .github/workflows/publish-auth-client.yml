@@ -1,0 +1,55 @@
+name: Publish Auth Client Package
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/auth-client/**'
+      - '.github/workflows/publish-auth-client.yml'
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: [self-hosted, Linux]
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@yhonda-ohishi-pub-dev'
+
+      - name: Set publish version from commit count
+        working-directory: packages/auth-client
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD -- packages/auth-client/)
+          VERSION="0.1.${COMMIT_COUNT}"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Publishing version: $VERSION"
+
+      - name: Tag version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f "auth-client-v${VERSION}"
+          git push origin "auth-client-v${VERSION}" --force
+
+      - name: Configure npm authentication
+        working-directory: packages/auth-client
+        run: |
+          echo "@yhonda-ohishi-pub-dev:registry=https://npm.pkg.github.com" > .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+
+      - name: Publish to GitHub Packages
+        working-directory: packages/auth-client
+        run: npm publish || echo "Version may already exist, skipping"

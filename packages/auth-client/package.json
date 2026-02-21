@@ -1,0 +1,26 @@
+{
+  "name": "@yhonda-ohishi-pub-dev/auth-client",
+  "version": "0.0.0-development",
+  "description": "Shared auth composable for Nuxt frontends (LINE WORKS auto-login support)",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "peerDependencies": {
+    "nuxt": ">=3.0.0",
+    "vue": ">=3.0.0"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yhonda-ohishi-pub-dev/auth-worker.git",
+    "directory": "packages/auth-client"
+  }
+}
