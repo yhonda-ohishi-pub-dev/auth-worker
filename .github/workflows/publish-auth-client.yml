@@ -31,7 +31,7 @@ jobs:
       - name: Set publish version from commit count
         working-directory: packages/auth-client
         run: |
-          COMMIT_COUNT=$(git rev-list --count HEAD -- packages/auth-client/)
+          COMMIT_COUNT=$(git rev-list --count HEAD -- .)
           VERSION="0.1.${COMMIT_COUNT}"
           npm version "$VERSION" --no-git-tag-version --allow-same-version
           echo "VERSION=$VERSION" >> $GITHUB_ENV
