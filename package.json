@@ -11,7 +11,7 @@
     "@bufbuild/protobuf": "^2.10.2",
     "@connectrpc/connect": "^2.1.1",
     "@connectrpc/connect-web": "^2.1.1",
-    "@yhonda-ohishi-pub-dev/logi-proto": "^0.1.33"
+    "@yhonda-ohishi-pub-dev/logi-proto": "file:../../rust/rust-logi/packages/logi-proto"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241218.0",

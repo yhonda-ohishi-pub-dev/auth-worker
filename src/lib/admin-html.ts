@@ -69,11 +69,12 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
     .btn-red:hover:not(:disabled) { background: #fecaca; }
     .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.8rem; }
     label { display: block; font-size: 0.875rem; font-weight: 500; color: #555; margin-bottom: 0.25rem; }
-    input, select {
+    input, select, textarea {
       width: 100%; padding: 0.625rem 0.75rem; border: 1px solid #ddd;
       border-radius: 6px; font-size: 1rem; margin-bottom: 1rem; outline: none;
     }
-    input:focus, select:focus { border-color: #3b82f6; }
+    input:focus, select:focus, textarea:focus { border-color: #3b82f6; }
+    textarea { font-family: monospace; font-size: 0.8rem; resize: vertical; min-height: 80px; }
     .toggle-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
     .toggle {
       position: relative; width: 44px; height: 24px; background: #d1d5db;
@@ -178,6 +179,74 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
         <button id="save-btn" class="btn btn-primary" onclick="handleSave()" disabled>\u8ffd\u52a0</button>
       </div>
     </form>
+  </div>
+
+  <!-- Bot Config section -->
+  <div class="container">
+    <h1>Bot \u8a2d\u5b9a</h1>
+    <p class="desc">
+      LINE WORKS Bot \u306e\u8a8d\u8a3c\u60c5\u5831\u3092\u7ba1\u7406\u3057\u307e\u3059\u3002Developer Console \u3067 Bot \u3092\u4f5c\u6210\u3057\u3001<br>
+      Client ID / Secret\u3001Service Account\u3001Private Key\u3001Bot ID \u3092\u767b\u9332\u3057\u3066\u304f\u3060\u3055\u3044\u3002
+    </p>
+
+    <div id="bot-msg"></div>
+
+    <div id="bot-config-list">
+      <div class="loading">\u8aad\u307f\u8fbc\u307f\u4e2d...</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <h2 id="bot-form-title">\u65b0\u898f Bot \u8ffd\u52a0</h2>
+    <form id="bot-form" onsubmit="return false;">
+      <input type="hidden" id="bot-edit-id" value="">
+
+      <label for="bot-name">\u540d\u524d</label>
+      <div class="field-desc">\u7ba1\u7406\u7528\u306e\u8b58\u5225\u540d\uff08\u4f8b: \u304a\u3072\u3057 Bot\uff09</div>
+      <input type="text" id="bot-name" placeholder="Bot \u540d">
+
+      <label for="bot-clientId">Client ID</label>
+      <input type="text" id="bot-clientId" placeholder="Developer Console \u306e Client ID">
+
+      <label for="bot-clientSecret">Client Secret</label>
+      <input type="password" id="bot-clientSecret" placeholder="Client Secret">
+      <div id="bot-secret-hint" class="hint hidden">\u8a2d\u5b9a\u6e08\u307f \u2014 \u7a7a\u6b04\u306e\u307e\u307e\u306a\u3089\u5909\u66f4\u3057\u307e\u305b\u3093</div>
+
+      <label for="bot-serviceAccount">Service Account</label>
+      <div class="field-desc">Developer Console \u3067\u767a\u884c\u3055\u308c\u305f Service Account ID</div>
+      <input type="text" id="bot-serviceAccount" placeholder="xxxxx.serviceaccount@xxx">
+
+      <label for="bot-privateKey">Private Key (PEM)</label>
+      <div class="field-desc">Developer Console \u3067\u30c0\u30a6\u30f3\u30ed\u30fc\u30c9\u3057\u305f\u79d8\u5bc6\u9375\uff08\u6697\u53f7\u5316\u3057\u3066\u4fdd\u5b58\uff09</div>
+      <textarea id="bot-privateKey" rows="4" placeholder="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"></textarea>
+      <div id="bot-pk-hint" class="hint hidden">\u8a2d\u5b9a\u6e08\u307f \u2014 \u7a7a\u6b04\u306e\u307e\u307e\u306a\u3089\u5909\u66f4\u3057\u307e\u305b\u3093</div>
+
+      <label for="bot-botId">Bot ID</label>
+      <div class="field-desc">LINE WORKS Bot \u306e\u56fa\u6709 ID</div>
+      <input type="text" id="bot-botId" placeholder="Bot ID">
+
+      <div class="toggle-row">
+        <label>\u6709\u52b9</label>
+        <div id="bot-enabled-toggle" class="toggle active" onclick="toggleBotEnabled()"></div>
+      </div>
+
+      <div class="form-actions">
+        <button id="bot-cancel-btn" class="btn btn-gray hidden" onclick="resetBotForm()">\u30ad\u30e3\u30f3\u30bb\u30eb</button>
+        <button id="bot-save-btn" class="btn btn-primary" onclick="handleBotSave()" disabled>\u8ffd\u52a0</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Bot delete confirmation modal -->
+  <div id="bot-delete-modal" class="modal-overlay hidden">
+    <div class="modal">
+      <h3>Bot \u524a\u9664\u78ba\u8a8d</h3>
+      <p>Bot\u300c<span id="bot-delete-target"></span>\u300d\u306e\u8a2d\u5b9a\u3092\u524a\u9664\u3057\u307e\u3059\u304b\uff1f</p>
+      <div class="modal-actions">
+        <button class="btn btn-gray" onclick="closeBotDeleteModal()">\u30ad\u30e3\u30f3\u30bb\u30eb</button>
+        <button class="btn btn-red" onclick="handleBotDelete()">\u524a\u9664</button>
+      </div>
+    </div>
   </div>
 
   <!-- Delete confirmation modal -->
@@ -422,15 +491,196 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
       }
     }
 
-    // Init
+    // ========== Bot Config ==========
+    let botEditing = false;
+    let botEnabled = true;
+    let botDeleteId = '';
+
+    async function loadBotConfigs() {
+      try {
+        const data = await api('/api/bot-config/list');
+        renderBotConfigs(data.configs || []);
+      } catch (e) {
+        document.getElementById('bot-config-list').innerHTML =
+          '<div class="error">' + escapeHtml(e.message) + '</div>';
+      }
+    }
+
+    function renderBotConfigs(configs) {
+      const el = document.getElementById('bot-config-list');
+      if (configs.length === 0) {
+        el.innerHTML = '<div class="empty">Bot \u304c\u672a\u8a2d\u5b9a\u3067\u3059</div>';
+        return;
+      }
+      el.innerHTML = configs.map(c => \`
+        <div class="config-item" style="flex-direction:column;align-items:stretch;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="config-info">
+              <div class="provider">\${escapeHtml(c.name)}</div>
+              <div class="detail">Bot ID: \${escapeHtml(c.botId)} \u30fb \${escapeHtml(c.provider)}</div>
+            </div>
+            <span class="badge \${c.enabled ? 'badge-green' : 'badge-gray'}">\${c.enabled ? '\u6709\u52b9' : '\u7121\u52b9'}</span>
+            <div class="config-actions">
+              \${c.enabled ? '<a href="/admin/rich-menu?bot=' + encodeURIComponent(c.id) + '" class="btn btn-primary btn-sm">Rich Menu</a>' : ''}
+              <button class="btn btn-gray btn-sm" onclick="editBotConfig(\${escapeAttr(JSON.stringify(c))})">\u7de8\u96c6</button>
+              <button class="btn btn-red btn-sm" onclick="confirmBotDelete('\${escapeAttr(c.id)}', '\${escapeAttr(c.name)}')">\u524a\u9664</button>
+            </div>
+          </div>
+        </div>
+      \`).join('');
+    }
+
+    function editBotConfig(config) {
+      botEditing = true;
+      document.getElementById('bot-form-title').textContent = 'Bot \u7de8\u96c6';
+      document.getElementById('bot-edit-id').value = config.id;
+      document.getElementById('bot-name').value = config.name;
+      document.getElementById('bot-clientId').value = config.clientId;
+      document.getElementById('bot-clientSecret').value = '';
+      document.getElementById('bot-clientSecret').placeholder =
+        config.hasClientSecret ? '\u8a2d\u5b9a\u6e08\u307f\uff08\u5909\u66f4\u3059\u308b\u5834\u5408\u306e\u307f\u5165\u529b\uff09' : 'Client Secret';
+      document.getElementById('bot-secret-hint').classList.toggle('hidden', !config.hasClientSecret);
+      document.getElementById('bot-serviceAccount').value = config.serviceAccount;
+      document.getElementById('bot-privateKey').value = '';
+      document.getElementById('bot-privateKey').placeholder =
+        config.hasPrivateKey ? '\u8a2d\u5b9a\u6e08\u307f\uff08\u5909\u66f4\u3059\u308b\u5834\u5408\u306e\u307f\u5165\u529b\uff09' : '-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----';
+      document.getElementById('bot-pk-hint').classList.toggle('hidden', !config.hasPrivateKey);
+      document.getElementById('bot-botId').value = config.botId;
+      botEnabled = config.enabled;
+      updateBotToggle();
+      document.getElementById('bot-cancel-btn').classList.remove('hidden');
+      document.getElementById('bot-save-btn').textContent = '\u66f4\u65b0';
+      validateBotForm();
+    }
+
+    function resetBotForm() {
+      botEditing = false;
+      document.getElementById('bot-form-title').textContent = '\u65b0\u898f Bot \u8ffd\u52a0';
+      document.getElementById('bot-edit-id').value = '';
+      document.getElementById('bot-name').value = '';
+      document.getElementById('bot-clientId').value = '';
+      document.getElementById('bot-clientSecret').value = '';
+      document.getElementById('bot-clientSecret').placeholder = 'Client Secret';
+      document.getElementById('bot-secret-hint').classList.add('hidden');
+      document.getElementById('bot-serviceAccount').value = '';
+      document.getElementById('bot-privateKey').value = '';
+      document.getElementById('bot-privateKey').placeholder = '-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----';
+      document.getElementById('bot-pk-hint').classList.add('hidden');
+      document.getElementById('bot-botId').value = '';
+      botEnabled = true;
+      updateBotToggle();
+      document.getElementById('bot-cancel-btn').classList.add('hidden');
+      document.getElementById('bot-save-btn').textContent = '\u8ffd\u52a0';
+      validateBotForm();
+      clearBotMsg();
+    }
+
+    function toggleBotEnabled() {
+      botEnabled = !botEnabled;
+      updateBotToggle();
+    }
+
+    function updateBotToggle() {
+      document.getElementById('bot-enabled-toggle').classList.toggle('active', botEnabled);
+    }
+
+    function validateBotForm() {
+      const name = document.getElementById('bot-name').value;
+      const clientId = document.getElementById('bot-clientId').value;
+      const clientSecret = document.getElementById('bot-clientSecret').value;
+      const serviceAccount = document.getElementById('bot-serviceAccount').value;
+      const privateKey = document.getElementById('bot-privateKey').value;
+      const botId = document.getElementById('bot-botId').value;
+      const valid = name && clientId && serviceAccount && botId &&
+        (botEditing || (clientSecret && privateKey));
+      document.getElementById('bot-save-btn').disabled = !valid;
+    }
+
+    function showBotMsg(text, type) {
+      const el = document.getElementById('bot-msg');
+      el.className = type;
+      el.textContent = text;
+      if (type === 'success') {
+        setTimeout(() => { el.className = ''; el.textContent = ''; }, 3000);
+      }
+    }
+
+    function clearBotMsg() {
+      const el = document.getElementById('bot-msg');
+      el.className = '';
+      el.textContent = '';
+    }
+
+    async function handleBotSave() {
+      const btn = document.getElementById('bot-save-btn');
+      btn.disabled = true;
+      btn.textContent = '\u4fdd\u5b58\u4e2d...';
+      clearBotMsg();
+
+      try {
+        await api('/api/bot-config/upsert', {
+          id: document.getElementById('bot-edit-id').value || undefined,
+          name: document.getElementById('bot-name').value,
+          clientId: document.getElementById('bot-clientId').value,
+          clientSecret: document.getElementById('bot-clientSecret').value,
+          serviceAccount: document.getElementById('bot-serviceAccount').value,
+          privateKey: document.getElementById('bot-privateKey').value,
+          botId: document.getElementById('bot-botId').value,
+          enabled: botEnabled,
+        });
+        showBotMsg('\u4fdd\u5b58\u3057\u307e\u3057\u305f', 'success');
+        resetBotForm();
+        await loadBotConfigs();
+      } catch (e) {
+        showBotMsg(e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = botEditing ? '\u66f4\u65b0' : '\u8ffd\u52a0';
+      }
+    }
+
+    function confirmBotDelete(id, name) {
+      botDeleteId = id;
+      document.getElementById('bot-delete-target').textContent = name;
+      document.getElementById('bot-delete-modal').classList.remove('hidden');
+    }
+
+    function closeBotDeleteModal() {
+      document.getElementById('bot-delete-modal').classList.add('hidden');
+      botDeleteId = '';
+    }
+
+    async function handleBotDelete() {
+      clearBotMsg();
+      try {
+        await api('/api/bot-config/delete', { id: botDeleteId });
+        showBotMsg('\u524a\u9664\u3057\u307e\u3057\u305f', 'success');
+        closeBotDeleteModal();
+        await loadBotConfigs();
+      } catch (e) {
+        showBotMsg(e.message, 'error');
+        closeBotDeleteModal();
+      }
+    }
+
+    // Init: SSO form
     document.getElementById('provider').addEventListener('change', validateForm);
     document.getElementById('clientId').addEventListener('input', validateForm);
     document.getElementById('clientSecret').addEventListener('input', validateForm);
     document.getElementById('externalOrgId').addEventListener('input', () => { validateForm(); updateWoffEndpointHint(); });
     document.getElementById('woffId').addEventListener('input', updateWoffEndpointHint);
 
+    // Init: Bot form
+    document.getElementById('bot-name').addEventListener('input', validateBotForm);
+    document.getElementById('bot-clientId').addEventListener('input', validateBotForm);
+    document.getElementById('bot-clientSecret').addEventListener('input', validateBotForm);
+    document.getElementById('bot-serviceAccount').addEventListener('input', validateBotForm);
+    document.getElementById('bot-privateKey').addEventListener('input', validateBotForm);
+    document.getElementById('bot-botId').addEventListener('input', validateBotForm);
+
     initAuth();
     loadConfigs();
+    loadBotConfigs();
   </script>
 </body>
 </html>`;

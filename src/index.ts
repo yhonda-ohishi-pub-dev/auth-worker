@@ -6,6 +6,12 @@ import { handleLineworksRedirect } from "./handlers/lineworks-redirect";
 import { handleLineworksCallback } from "./handlers/lineworks-callback";
 import { handleAdminSsoPage, handleAdminSsoCallback } from "./handlers/admin-sso";
 import { handleSsoList, handleSsoUpsert, handleSsoDelete } from "./handlers/api-sso";
+import { handleBotConfigList, handleBotConfigUpsert, handleBotConfigDelete } from "./handlers/api-bot-config";
+import {
+  handleRichMenuList, handleRichMenuCreate, handleRichMenuDelete,
+  handleRichMenuImageUpload, handleRichMenuDefaultSet, handleRichMenuDefaultDelete,
+} from "./handlers/api-rich-menu";
+import { handleAdminRichMenuPage, handleAdminRichMenuCallback } from "./handlers/admin-rich-menu";
 import { handleWoffAuth, handleWoffConfig } from "./handlers/woff-auth";
 import { handleTopPage } from "./handlers/top-page";
 
@@ -29,6 +35,13 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    console.log(JSON.stringify({
+      event: "request",
+      method: request.method,
+      path: url.pathname,
+      search: url.search,
+    }));
+
     try {
       if (request.method === "GET") {
         switch (url.pathname) {
@@ -50,6 +63,10 @@ export default {
             return await handleAdminSsoPage(request, env);
           case "/admin/sso/callback":
             return await handleAdminSsoCallback();
+          case "/admin/rich-menu":
+            return await handleAdminRichMenuPage(request, env);
+          case "/admin/rich-menu/callback":
+            return await handleAdminRichMenuCallback();
           default:
             return errorResponse(404, "Not found");
         }
@@ -67,6 +84,26 @@ export default {
             return await handleSsoDelete(request, env);
           case "/auth/woff":
             return await handleWoffAuth(request, env);
+          // Bot Config API
+          case "/api/bot-config/list":
+            return await handleBotConfigList(request, env);
+          case "/api/bot-config/upsert":
+            return await handleBotConfigUpsert(request, env);
+          case "/api/bot-config/delete":
+            return await handleBotConfigDelete(request, env);
+          // Rich Menu API
+          case "/api/richmenu/list":
+            return await handleRichMenuList(request, env);
+          case "/api/richmenu/create":
+            return await handleRichMenuCreate(request, env);
+          case "/api/richmenu/delete":
+            return await handleRichMenuDelete(request, env);
+          case "/api/richmenu/image":
+            return await handleRichMenuImageUpload(request, env);
+          case "/api/richmenu/default/set":
+            return await handleRichMenuDefaultSet(request, env);
+          case "/api/richmenu/default/delete":
+            return await handleRichMenuDefaultDelete(request, env);
           default:
             return errorResponse(404, "Not found");
         }
@@ -85,7 +122,13 @@ export default {
 
       return errorResponse(405, "Method not allowed");
     } catch (err) {
-      console.error("Unhandled error:", err);
+      console.error(JSON.stringify({
+        event: "unhandled_error",
+        method: request.method,
+        path: url.pathname,
+        error: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      }));
       return errorResponse(
         500,
         err instanceof Error ? err.message : "Internal server error",
