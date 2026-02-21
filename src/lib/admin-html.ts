@@ -259,9 +259,10 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
         const oauthUrls = c.externalOrgId && c.enabled ? frontendOrigins.map(origin =>
           \`<div class="url-row"><code>\${escapeHtml(origin)}/?lw=\${escapeHtml(c.externalOrgId)}</code><button class="btn-copy" onclick="copyUrl(this, '\${escapeAttr(origin)}/?lw=\${escapeAttr(c.externalOrgId)}')">\u30b3\u30d4\u30fc</button></div>\`
         ).join('') : '';
-        const woffUrls = c.woffId && c.externalOrgId && c.enabled ? frontendOrigins.map(origin =>
-          \`<div class="url-row"><code>\${escapeHtml(origin)}/?lw=\${escapeHtml(c.externalOrgId)}&woff</code><button class="btn-copy" onclick="copyUrl(this, '\${escapeAttr(origin)}/?lw=\${escapeAttr(c.externalOrgId)}&woff')">\u30b3\u30d4\u30fc</button></div>\`
-        ).join('') : '';
+        const topOrigin = window.location.origin;
+        const woffUrls = c.woffId && c.externalOrgId && c.enabled ?
+          \`<div class="url-row"><code>\${escapeHtml(topOrigin)}/top?lw=\${escapeHtml(c.externalOrgId)}&woff</code><button class="btn-copy" onclick="copyUrl(this, '\${escapeAttr(topOrigin)}/top?lw=\${escapeAttr(c.externalOrgId)}&woff')">\u30b3\u30d4\u30fc</button></div>\`
+          : '';
         return \`
         <div class="config-item" style="flex-direction:column;align-items:stretch;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -413,10 +414,8 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
       const hint = document.getElementById('woff-endpoint-hint');
       const urlsEl = document.getElementById('woff-endpoint-urls');
       if (woffId && orgId) {
-        urlsEl.innerHTML = frontendOrigins.map(origin => {
-          const url = origin + '/?lw=' + encodeURIComponent(orgId) + '&woff';
-          return '<div class="url-row"><code>' + escapeHtml(url) + '</code><button class="btn-copy" onclick="copyUrl(this, \\'' + escapeAttr(url) + '\\')">\u30b3\u30d4\u30fc</button></div>';
-        }).join('');
+        const url = window.location.origin + '/top?lw=' + encodeURIComponent(orgId) + '&woff';
+        urlsEl.innerHTML = '<div class="url-row"><code>' + escapeHtml(url) + '</code><button class="btn-copy" onclick="copyUrl(this, \\'' + escapeAttr(url) + '\\')">\u30b3\u30d4\u30fc</button></div>';
         hint.classList.remove('hidden');
       } else {
         hint.classList.add('hidden');

@@ -16,6 +16,13 @@ const AUTH_COOKIE_NAME = 'logi_auth_token'
 const LW_DOMAIN_KEY = 'logi_lw_domain'
 const LW_DOMAIN_COOKIE = 'lw_domain'
 
+/** ホスト名から親ドメインを取得（cross-subdomain cookie 用） */
+function getParentDomain(): string {
+  if (typeof window === 'undefined') return ''
+  const parts = window.location.hostname.split('.')
+  return parts.length > 2 ? '.' + parts.slice(-2).join('.') : window.location.hostname
+}
+
 export interface AuthState {
   token: string
   orgId: string
@@ -36,22 +43,25 @@ function readStorage(): AuthState | null {
 function writeStorage(state: AuthState): void {
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state))
 
-  // cookie にもトークンを保存（server-side handler 用: share_target 等）
+  // cookie にもトークンを保存（server-side handler + cross-subdomain 共有用）
   const now = Math.floor(Date.now() / 1000)
   const maxAge = Math.max(state.expiresAt - now, 0)
-  document.cookie = `${AUTH_COOKIE_NAME}=${state.token}; path=/; max-age=${maxAge}; secure; samesite=lax`
+  const domain = getParentDomain()
+  document.cookie = `${AUTH_COOKIE_NAME}=${state.token}; Domain=${domain}; path=/; max-age=${maxAge}; secure; samesite=lax`
 }
 
 function clearStorage(): void {
   localStorage.removeItem(AUTH_STORAGE_KEY)
-  document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0; secure; samesite=lax`
+  const domain = getParentDomain()
+  document.cookie = `${AUTH_COOKIE_NAME}=; Domain=${domain}; path=/; max-age=0; secure; samesite=lax`
 }
 
-/** LINE WORKS ドメインを保存（localStorage + cookie 二重保存） */
+/** LINE WORKS ドメインを保存（localStorage + cookie 二重保存、cross-subdomain 共有） */
 function saveLwDomain(domain: string): void {
   localStorage.setItem(LW_DOMAIN_KEY, domain)
   const maxAge = 30 * 24 * 60 * 60 // 30日
-  document.cookie = `${LW_DOMAIN_COOKIE}=${encodeURIComponent(domain)}; path=/; max-age=${maxAge}; secure; samesite=lax`
+  const parentDomain = getParentDomain()
+  document.cookie = `${LW_DOMAIN_COOKIE}=${encodeURIComponent(domain)}; Domain=${parentDomain}; path=/; max-age=${maxAge}; secure; samesite=lax`
 }
 
 /** LINE WORKS ドメインを取得 */
@@ -63,7 +73,8 @@ function getLwDomain(): string | null {
 /** LINE WORKS ドメインをクリア（明示的ログアウト時） */
 function clearLwDomain(): void {
   localStorage.removeItem(LW_DOMAIN_KEY)
-  document.cookie = `${LW_DOMAIN_COOKIE}=; path=/; max-age=0; secure; samesite=lax`
+  const parentDomain = getParentDomain()
+  document.cookie = `${LW_DOMAIN_COOKIE}=; Domain=${parentDomain}; path=/; max-age=0; secure; samesite=lax`
 }
 
 export const useAuth = () => {
@@ -125,6 +136,35 @@ export const useAuth = () => {
     // Clean fragment from URL without reload
     history.replaceState(null, '', window.location.pathname + window.location.search)
     return true
+  }
+
+  /**
+   * Cookie から認証状態を復旧（cross-subdomain 共有用）
+   * トップページや他アプリで認証済みの場合、.mtamaramu.com cookie から JWT を復元
+   * @returns true if token was recovered from cookie
+   */
+  function recoverFromCookie(): boolean {
+    if (typeof window === 'undefined') return false
+    const tokenCookie = document.cookie.split('; ').find(c => c.startsWith(AUTH_COOKIE_NAME + '='))
+    if (!tokenCookie) return false
+    const token = tokenCookie.split('=').slice(1).join('=')
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const now = Math.floor(Date.now() / 1000)
+      if (payload.exp <= now) return false
+      const state: AuthState = { token, orgId: payload.org, expiresAt: payload.exp }
+      authState.value = state
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state))
+      // lw_domain cookie → localStorage 同期
+      const lwCookie = document.cookie.split('; ').find(c => c.startsWith(LW_DOMAIN_COOKIE + '='))
+      if (lwCookie) {
+        const domain = decodeURIComponent(lwCookie.split('=')[1] || '')
+        if (domain) saveLwDomain(domain)
+      }
+      return true
+    } catch {
+      return false
+    }
   }
 
   /**
@@ -203,6 +243,7 @@ export const useAuth = () => {
     token,
     orgId,
     loadFromStorage,
+    recoverFromCookie,
     consumeFragment,
     redirectToLogin,
     logout,

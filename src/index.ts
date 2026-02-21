@@ -7,6 +7,7 @@ import { handleLineworksCallback } from "./handlers/lineworks-callback";
 import { handleAdminSsoPage, handleAdminSsoCallback } from "./handlers/admin-sso";
 import { handleSsoList, handleSsoUpsert, handleSsoDelete } from "./handlers/api-sso";
 import { handleWoffAuth, handleWoffConfig } from "./handlers/woff-auth";
+import { handleTopPage } from "./handlers/top-page";
 
 export interface Env {
   GRPC_PROXY: Fetcher;
@@ -41,6 +42,8 @@ export default {
             return await handleLineworksRedirect(request, env);
           case "/oauth/lineworks/callback":
             return await handleLineworksCallback(request, env);
+          case "/top":
+            return await handleTopPage(request, env);
           case "/auth/woff-config":
             return await handleWoffConfig(request, env);
           case "/admin/sso":
