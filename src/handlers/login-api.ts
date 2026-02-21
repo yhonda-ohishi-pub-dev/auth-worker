@@ -25,6 +25,8 @@ export async function handleAuthLogin(
     return redirectToLogin(requestUrl.origin, redirectUri, "Username and password are required");
   }
 
+  console.log(JSON.stringify({ event: "login_attempt", username, orgId: organizationId }));
+
   const transport = createTransport(env.GRPC_PROXY);
   const client = createClient(AuthService, transport);
 
@@ -52,9 +54,11 @@ export async function handleAuthLogin(
       }
     }
 
+    console.log(JSON.stringify({ event: "login_success", username, orgId: organizationId }));
     return Response.redirect(`${redirectUri}#${fragment.toString()}`, 302);
   } catch (err) {
     if (err instanceof ConnectError) {
+      console.log(JSON.stringify({ event: "login_failure", username, orgId: organizationId, error: err.message }));
       return redirectToLogin(requestUrl.origin, redirectUri, err.message, organizationId || undefined);
     }
     throw err;

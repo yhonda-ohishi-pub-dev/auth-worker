@@ -26,6 +26,8 @@ export async function handleLineworksRedirect(
     return new Response("Invalid LINE WORKS address", { status: 400 });
   }
 
+  console.log(JSON.stringify({ event: "lw_redirect", domain, redirectUri }));
+
   // Resolve SSO provider config from rust-logi
   const transport = createTransport(env.GRPC_PROXY);
   const client = createClient(AuthService, transport);
@@ -37,12 +39,15 @@ export async function handleLineworksRedirect(
     });
 
     if (!config.available) {
+      console.log(JSON.stringify({ event: "lw_not_configured", domain }));
       const params = new URLSearchParams({
         redirect_uri: redirectUri,
         error: `LINE WORKS login is not configured for "${domain}"`,
       });
       return Response.redirect(`${url.origin}/login?${params.toString()}`, 302);
     }
+
+    console.log(JSON.stringify({ event: "lw_oauth_start", domain, clientId: config.clientId }));
 
     // Generate HMAC-signed state with provider info
     const state = await generateOAuthState(redirectUri, env.OAUTH_STATE_SECRET, {
@@ -64,6 +69,7 @@ export async function handleLineworksRedirect(
     return Response.redirect(authorizeUrl.toString(), 302);
   } catch (err) {
     if (err instanceof ConnectError) {
+      console.log(JSON.stringify({ event: "lw_redirect_error", domain, error: err.message }));
       const params = new URLSearchParams({
         redirect_uri: redirectUri,
         error: err.message,

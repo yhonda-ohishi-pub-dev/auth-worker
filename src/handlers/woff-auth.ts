@@ -31,6 +31,8 @@ export async function handleWoffAuth(
     return jsonError(400, "Invalid or missing redirect_uri");
   }
 
+  console.log(JSON.stringify({ event: "woff_auth", domainId }));
+
   const transport = createTransport(env.GRPC_PROXY);
   const client = createClient(AuthService, transport);
 
@@ -55,6 +57,7 @@ export async function handleWoffAuth(
       }
     }
 
+    console.log(JSON.stringify({ event: "woff_auth_success", domainId, orgId }));
     return new Response(
       JSON.stringify({
         token: response.token,
@@ -70,6 +73,7 @@ export async function handleWoffAuth(
     );
   } catch (err) {
     if (err instanceof ConnectError) {
+      console.log(JSON.stringify({ event: "woff_auth_failure", domainId, error: err.message }));
       return jsonError(401, err.message);
     }
     throw err;
@@ -86,6 +90,8 @@ export async function handleWoffConfig(
     return jsonError(400, "domain parameter required");
   }
 
+  console.log(JSON.stringify({ event: "woff_config", domain }));
+
   const transport = createTransport(env.GRPC_PROXY);
   const client = createClient(AuthService, transport);
 
@@ -96,9 +102,11 @@ export async function handleWoffConfig(
     });
 
     if (!res.available || !res.woffId) {
+      console.log(JSON.stringify({ event: "woff_config_not_found", domain }));
       return jsonError(404, "WOFF not configured for this domain");
     }
 
+    console.log(JSON.stringify({ event: "woff_config_found", domain, woffId: res.woffId }));
     return new Response(JSON.stringify({ woffId: res.woffId }), {
       headers: {
         "Content-Type": "application/json",

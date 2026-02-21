@@ -32,6 +32,8 @@ export async function handleSsoList(
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
 
+  console.log(JSON.stringify({ event: "sso_list" }));
+
   const transport = createTransportWithAuth(env.GRPC_PROXY, token);
   const client = createClient(SsoSettingsService, transport);
 
@@ -79,6 +81,8 @@ export async function handleSsoUpsert(
     return jsonResponse({ error: "provider, clientId, externalOrgId are required" }, 400);
   }
 
+  console.log(JSON.stringify({ event: "sso_upsert", provider: body.provider, externalOrgId: body.externalOrgId }));
+
   const transport = createTransportWithAuth(env.GRPC_PROXY, token);
   const client = createClient(SsoSettingsService, transport);
 
@@ -120,6 +124,8 @@ export async function handleSsoDelete(
   if (!body.provider) {
     return jsonResponse({ error: "provider is required" }, 400);
   }
+
+  console.log(JSON.stringify({ event: "sso_delete", provider: body.provider }));
 
   const transport = createTransportWithAuth(env.GRPC_PROXY, token);
   const client = createClient(SsoSettingsService, transport);

@@ -30,6 +30,8 @@ export async function handleTopPage(
   _request: Request,
   env: Env,
 ): Promise<Response> {
+  console.log(JSON.stringify({ event: "top_page" }));
+
   const apps = (env.ALLOWED_REDIRECT_ORIGINS || "")
     .split(",")
     .map((s: string) => s.trim())

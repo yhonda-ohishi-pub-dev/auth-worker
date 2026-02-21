@@ -22,6 +22,7 @@ export async function handleAdminSsoPage(
   env: Env,
 ): Promise<Response> {
   const token = getTokenFromCookie(request);
+  console.log(JSON.stringify({ event: "admin_access", hasToken: !!token }));
   if (!token) {
     const callbackUri = `${env.AUTH_WORKER_ORIGIN}/admin/sso/callback`;
     return Response.redirect(

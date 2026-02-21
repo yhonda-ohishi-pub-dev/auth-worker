@@ -20,6 +20,8 @@ export async function handleLoginPage(
     ? `/oauth/google/redirect?redirect_uri=${encodeURIComponent(redirectUri)}`
     : "";
 
+  console.log(JSON.stringify({ event: "login_page", redirectUri, orgId, error }));
+
   const html = renderLoginPage({
     redirectUri,
     orgId,

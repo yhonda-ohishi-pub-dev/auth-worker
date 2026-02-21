@@ -14,6 +14,8 @@ export async function handleLineworksCallback(
   const stateParam = url.searchParams.get("state");
   const errorParam = url.searchParams.get("error");
 
+  console.log(JSON.stringify({ event: "lw_callback", hasCode: !!code, error: errorParam }));
+
   if (errorParam) {
     return new Response(`LINE WORKS OAuth error: ${errorParam}`, { status: 400 });
   }
@@ -82,6 +84,7 @@ export async function handleLineworksCallback(
       : redirectHost;
     const cookieValue = `logi_auth_token=${response.token}; Domain=.${parentDomain}; Path=/; Max-Age=86400; Secure; SameSite=Lax`;
 
+    console.log(JSON.stringify({ event: "lw_login_success", externalOrgId, redirectUri }));
     return new Response(null, {
       status: 302,
       headers: {
@@ -91,6 +94,7 @@ export async function handleLineworksCallback(
     });
   } catch (err) {
     if (err instanceof ConnectError) {
+      console.log(JSON.stringify({ event: "lw_login_failure", externalOrgId, error: err.message }));
       return redirectToLogin(origin, redirectUri, err.message);
     }
     throw err;

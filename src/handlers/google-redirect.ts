@@ -16,6 +16,8 @@ export async function handleGoogleRedirect(
     return new Response("Invalid or missing redirect_uri", { status: 400 });
   }
 
+  console.log(JSON.stringify({ event: "google_redirect", redirectUri }));
+
   // Generate HMAC-signed state with embedded redirect_uri
   const state = await generateOAuthState(redirectUri, env.OAUTH_STATE_SECRET);
 

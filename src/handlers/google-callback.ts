@@ -14,6 +14,8 @@ export async function handleGoogleCallback(
   const stateParam = url.searchParams.get("state");
   const errorParam = url.searchParams.get("error");
 
+  console.log(JSON.stringify({ event: "google_callback", hasCode: !!code, error: errorParam }));
+
   // User denied or Google returned error
   if (errorParam) {
     // No redirect_uri available without valid state, return plain error
@@ -92,9 +94,11 @@ export async function handleGoogleCallback(
     if (!finalUrl.searchParams.has('lw_callback')) {
       finalUrl.searchParams.set('lw_callback', '1');
     }
+    console.log(JSON.stringify({ event: "google_login_success", redirectUri }));
     return Response.redirect(`${finalUrl.toString()}#${fragment.toString()}`, 302);
   } catch (err) {
     if (err instanceof ConnectError) {
+      console.log(JSON.stringify({ event: "google_login_failure", error: err.message }));
       return redirectToLogin(origin, redirectUri, err.message);
     }
     throw err;
