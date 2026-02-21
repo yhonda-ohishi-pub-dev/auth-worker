@@ -72,7 +72,23 @@ export async function handleLineworksCallback(
     if (!finalUrl.searchParams.has('lw_callback')) {
       finalUrl.searchParams.set('lw_callback', '1');
     }
-    return Response.redirect(`${finalUrl.toString()}#${fragment.toString()}`, 302);
+
+    // LINE WORKS in-app browser が hash fragment を上書きするため、
+    // JWT を cookie でもセット（親ドメイン共有でフロントエンドが読める）
+    const redirectHost = finalUrl.hostname;
+    const domainParts = redirectHost.split('.');
+    const parentDomain = domainParts.length > 2
+      ? domainParts.slice(-2).join('.')
+      : redirectHost;
+    const cookieValue = `logi_auth_token=${response.token}; Domain=.${parentDomain}; Path=/; Max-Age=86400; Secure; SameSite=Lax`;
+
+    return new Response(null, {
+      status: 302,
+      headers: {
+        'Location': `${finalUrl.toString()}#${fragment.toString()}`,
+        'Set-Cookie': cookieValue,
+      },
+    });
   } catch (err) {
     if (err instanceof ConnectError) {
       return redirectToLogin(origin, redirectUri, err.message);
