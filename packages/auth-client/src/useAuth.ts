@@ -54,6 +54,8 @@ function clearStorage(): void {
   localStorage.removeItem(AUTH_STORAGE_KEY)
   const domain = getParentDomain()
   document.cookie = `${AUTH_COOKIE_NAME}=; Domain=${domain}; path=/; max-age=0; secure; samesite=lax`
+  // host-only cookie も削除（サーバーミドルウェアが Domain なしで設定した stale cookie 対策）
+  document.cookie = `${AUTH_COOKIE_NAME}=; path=/; max-age=0; secure; samesite=lax`
 }
 
 /** LINE WORKS ドメインを保存（localStorage + cookie 二重保存、cross-subdomain 共有） */
@@ -75,6 +77,8 @@ function clearLwDomain(): void {
   localStorage.removeItem(LW_DOMAIN_KEY)
   const parentDomain = getParentDomain()
   document.cookie = `${LW_DOMAIN_COOKIE}=; Domain=${parentDomain}; path=/; max-age=0; secure; samesite=lax`
+  // host-only cookie も削除（サーバーミドルウェアが Domain なしで設定した stale cookie 対策）
+  document.cookie = `${LW_DOMAIN_COOKIE}=; path=/; max-age=0; secure; samesite=lax`
 }
 
 export const useAuth = () => {
