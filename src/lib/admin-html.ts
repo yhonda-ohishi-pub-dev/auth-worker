@@ -28,10 +28,11 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
     }
     h1 { font-size: 1.5rem; margin-bottom: 1.5rem; color: #333; display: flex; align-items: center; gap: 0.75rem; }
     .back-link {
-      display: inline-flex; align-items: center; font-size: 0.875rem; color: #6b7280;
-      text-decoration: none; margin-bottom: 1rem;
+      display: inline-flex; align-items: center; gap: 0.375rem; font-size: 1rem; color: #3b82f6;
+      text-decoration: none; margin-bottom: 1rem; font-weight: 500;
+      padding: 0.5rem 0.75rem; border: 1px solid #3b82f6; border-radius: 6px;
     }
-    .back-link:hover { color: #374151; }
+    .back-link:hover { background: #3b82f6; color: white; }
     h2 { font-size: 1.1rem; margin-bottom: 1rem; color: #555; }
     .error {
       background: #fef2f2; border: 1px solid #fecaca; color: #dc2626;
@@ -117,7 +118,7 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
 </head>
 <body>
   <div class="container">
-    <a href="javascript:history.back()" class="back-link">\u2190 \u623b\u308b</a>
+    <a href="${frontendOrigins[0] || 'javascript:history.back()'}" class="back-link">\u2190 \u623b\u308b</a>
     <h1>SSO \u30d7\u30ed\u30d0\u30a4\u30c0\u8a2d\u5b9a</h1>
     <p class="desc">
       \u5916\u90e8 SSO \u30d7\u30ed\u30d0\u30a4\u30c0\uff08LINE WORKS \u7b49\uff09\u3092\u767b\u9332\u3059\u308b\u3068\u3001\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u304b\u3089\u30d7\u30ed\u30d0\u30a4\u30c0\u7d4c\u7531\u3067\u8a8d\u8a3c\u3067\u304d\u307e\u3059\u3002<br>
@@ -185,7 +186,7 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
     let editing = false;
     let enabled = true;
     let deleteProvider = '';
-    const frontendOrigins = \${originsJson};
+    const frontendOrigins = ${originsJson};
 
     // Auth: read JWT from cookie (set by /admin/sso/callback)
     function initAuth() {

@@ -67,7 +67,12 @@ export async function handleLineworksCallback(
       }
     }
 
-    return Response.redirect(`${redirectUri}#${fragment.toString()}`, 302);
+    // Ensure lw_callback=1 to prevent server middleware redirect loop
+    const finalUrl = new URL(redirectUri);
+    if (!finalUrl.searchParams.has('lw_callback')) {
+      finalUrl.searchParams.set('lw_callback', '1');
+    }
+    return Response.redirect(`${finalUrl.toString()}#${fragment.toString()}`, 302);
   } catch (err) {
     if (err instanceof ConnectError) {
       return redirectToLogin(origin, redirectUri, err.message);

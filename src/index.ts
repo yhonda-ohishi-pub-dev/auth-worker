@@ -6,6 +6,7 @@ import { handleLineworksRedirect } from "./handlers/lineworks-redirect";
 import { handleLineworksCallback } from "./handlers/lineworks-callback";
 import { handleAdminSsoPage, handleAdminSsoCallback } from "./handlers/admin-sso";
 import { handleSsoList, handleSsoUpsert, handleSsoDelete } from "./handlers/api-sso";
+import { handleWoffAuth, handleWoffConfig } from "./handlers/woff-auth";
 
 export interface Env {
   GRPC_PROXY: Fetcher;
@@ -40,6 +41,8 @@ export default {
             return await handleLineworksRedirect(request, env);
           case "/oauth/lineworks/callback":
             return await handleLineworksCallback(request, env);
+          case "/auth/woff-config":
+            return await handleWoffConfig(request, env);
           case "/admin/sso":
             return await handleAdminSsoPage(request, env);
           case "/admin/sso/callback":
@@ -59,9 +62,22 @@ export default {
             return await handleSsoUpsert(request, env);
           case "/api/sso/delete":
             return await handleSsoDelete(request, env);
+          case "/auth/woff":
+            return await handleWoffAuth(request, env);
           default:
             return errorResponse(404, "Not found");
         }
+      }
+
+      // CORS preflight for /auth/woff
+      if (request.method === "OPTIONS" && url.pathname === "/auth/woff") {
+        return new Response(null, {
+          headers: {
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+          },
+        });
       }
 
       return errorResponse(405, "Method not allowed");
