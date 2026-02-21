@@ -21,9 +21,10 @@ export function isAllowedRedirectUri(
 export async function generateOAuthState(
   redirectUri: string,
   secret: string,
+  extra?: Record<string, string>,
 ): Promise<string> {
   const nonce = crypto.randomUUID();
-  const statePayload = JSON.stringify({ redirect_uri: redirectUri, nonce });
+  const statePayload = JSON.stringify({ redirect_uri: redirectUri, nonce, ...extra });
   const stateB64 = base64UrlEncode(statePayload);
 
   const signature = await hmacSign(stateB64, secret);
@@ -34,7 +35,7 @@ export async function generateOAuthState(
 export async function verifyOAuthState(
   state: string,
   secret: string,
-): Promise<{ redirect_uri: string } | null> {
+): Promise<{ redirect_uri: string; provider?: string; external_org_id?: string } | null> {
   const dotIndex = state.indexOf(".");
   if (dotIndex === -1) return null;
 
@@ -46,7 +47,7 @@ export async function verifyOAuthState(
 
   try {
     const json = base64UrlDecode(stateB64);
-    return JSON.parse(json) as { redirect_uri: string };
+    return JSON.parse(json) as { redirect_uri: string; provider?: string; external_org_id?: string };
   } catch {
     return null;
   }

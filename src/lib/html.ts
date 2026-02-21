@@ -8,10 +8,11 @@ interface LoginPageParams {
   error?: string;
   googleEnabled: boolean;
   googleRedirectUrl: string;
+  lineworksRedirectUrl: string;
 }
 
 export function renderLoginPage(params: LoginPageParams): string {
-  const { redirectUri, orgId, error, googleEnabled, googleRedirectUrl } =
+  const { redirectUri, orgId, error, googleEnabled, googleRedirectUrl, lineworksRedirectUrl } =
     params;
 
   const errorHtml = error
@@ -127,6 +128,16 @@ export function renderLoginPage(params: LoginPageParams): string {
       transition: background 0.2s;
     }
     .google-btn:hover { background: #f9fafb; }
+    .lw-form { display: flex; gap: 0.5rem; }
+    .lw-form input { margin-bottom: 0; flex: 1; }
+    .lw-form button {
+      width: auto;
+      padding: 0.625rem 1rem;
+      background: #00b900;
+      white-space: nowrap;
+      font-size: 0.875rem;
+    }
+    .lw-form button:hover { background: #009a00; }
   </style>
 </head>
 <body>
@@ -145,6 +156,13 @@ export function renderLoginPage(params: LoginPageParams): string {
       <button type="submit">Login</button>
     </form>
     ${googleButtonHtml}
+    <div class="divider"><span>or</span></div>
+    <label for="lw_address">LINE WORKS</label>
+    <form class="lw-form" action="${escapeHtml(lineworksRedirectUrl)}" method="GET">
+      <input type="hidden" name="redirect_uri" value="${escapeHtml(redirectUri)}">
+      <input type="text" id="lw_address" name="address" placeholder="user@domain" autocomplete="on">
+      <button type="submit">Login</button>
+    </form>
   </div>
 </body>
 </html>`;

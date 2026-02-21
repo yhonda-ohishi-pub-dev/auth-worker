@@ -2,6 +2,10 @@ import { handleLoginPage } from "./handlers/login-page";
 import { handleAuthLogin } from "./handlers/login-api";
 import { handleGoogleRedirect } from "./handlers/google-redirect";
 import { handleGoogleCallback } from "./handlers/google-callback";
+import { handleLineworksRedirect } from "./handlers/lineworks-redirect";
+import { handleLineworksCallback } from "./handlers/lineworks-callback";
+import { handleAdminSsoPage, handleAdminSsoCallback } from "./handlers/admin-sso";
+import { handleSsoList, handleSsoUpsert, handleSsoDelete } from "./handlers/api-sso";
 
 export interface Env {
   GRPC_PROXY: Fetcher;
@@ -32,6 +36,14 @@ export default {
             return await handleGoogleRedirect(request, env);
           case "/oauth/google/callback":
             return await handleGoogleCallback(request, env);
+          case "/oauth/lineworks/redirect":
+            return await handleLineworksRedirect(request, env);
+          case "/oauth/lineworks/callback":
+            return await handleLineworksCallback(request, env);
+          case "/admin/sso":
+            return await handleAdminSsoPage(request, env);
+          case "/admin/sso/callback":
+            return await handleAdminSsoCallback();
           default:
             return errorResponse(404, "Not found");
         }
@@ -41,6 +53,12 @@ export default {
         switch (url.pathname) {
           case "/auth/login":
             return await handleAuthLogin(request, env);
+          case "/api/sso/list":
+            return await handleSsoList(request, env);
+          case "/api/sso/upsert":
+            return await handleSsoUpsert(request, env);
+          case "/api/sso/delete":
+            return await handleSsoDelete(request, env);
           default:
             return errorResponse(404, "Not found");
         }

@@ -26,6 +26,7 @@ export async function handleLoginPage(
     error,
     googleEnabled,
     googleRedirectUrl,
+    lineworksRedirectUrl: "/oauth/lineworks/redirect",
   });
 
   return new Response(html, {

@@ -1,7 +1,12 @@
 import { createGrpcWebTransport } from "@connectrpc/connect-web";
-import type { Transport } from "@connectrpc/connect";
+import type { Transport, Interceptor } from "@connectrpc/connect";
 
 export function createTransport(grpcProxy: Fetcher): Transport {
+  return createTransportWithAuth(grpcProxy);
+}
+
+/** Create transport with optional JWT auth header injection */
+export function createTransportWithAuth(grpcProxy: Fetcher, token?: string): Transport {
   const proxyFetch = grpcProxy.fetch.bind(grpcProxy) as typeof globalThis.fetch;
   const wrappedFetch: typeof globalThis.fetch = (input, init) => {
     // Cloudflare Workers doesn't support redirect: "error"
@@ -11,8 +16,18 @@ export function createTransport(grpcProxy: Fetcher): Transport {
     }
     return proxyFetch(input, init);
   };
+
+  const interceptors: Interceptor[] = [];
+  if (token) {
+    interceptors.push((next) => async (req) => {
+      req.header.set("x-auth-token", token);
+      return next(req);
+    });
+  }
+
   return createGrpcWebTransport({
     baseUrl: "https://cf-grpc-proxy",
     fetch: wrappedFetch,
+    interceptors,
   });
 }
