@@ -138,6 +138,25 @@ export function renderLoginPage(params: LoginPageParams): string {
       font-size: 0.875rem;
     }
     .lw-form button:hover { background: #009a00; }
+    .clear-btn {
+      display: block;
+      margin: 1.25rem auto 0;
+      padding: 0.5rem 1rem;
+      background: none;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      color: #999;
+      font-size: 0.75rem;
+      cursor: pointer;
+      width: auto;
+    }
+    .clear-btn:hover { background: #f9fafb; color: #666; }
+    .clear-msg {
+      text-align: center;
+      font-size: 0.75rem;
+      color: #16a34a;
+      margin-top: 0.5rem;
+    }
   </style>
 </head>
 <body>
@@ -163,6 +182,22 @@ export function renderLoginPage(params: LoginPageParams): string {
       <input type="text" id="lw_address" name="address" placeholder="user@domain" autocomplete="on">
       <button type="submit">Login</button>
     </form>
+    <button class="clear-btn" onclick="clearAllCookies()">Cookie をクリア</button>
+    <div id="clear-msg" class="clear-msg" style="display:none">クリアしました。ページをリロードします...</div>
+    <script>
+    function clearAllCookies() {
+      var names = ['lw_domain', 'logi_auth_token', 'logi_auth'];
+      var parts = location.hostname.split('.');
+      var parent = parts.length > 2 ? '.' + parts.slice(-2).join('.') : location.hostname;
+      names.forEach(function(n) {
+        document.cookie = n + '=; path=/; max-age=0; secure; samesite=lax';
+        document.cookie = n + '=; Domain=' + parent + '; path=/; max-age=0; secure; samesite=lax';
+      });
+      try { localStorage.removeItem('logi_auth'); localStorage.removeItem('logi_lw_domain'); } catch(e) {}
+      document.getElementById('clear-msg').style.display = 'block';
+      setTimeout(function() { location.reload(); }, 500);
+    }
+    </script>
   </div>
 </body>
 </html>`;
