@@ -30,7 +30,12 @@ export async function handleAdminSsoPage(
     );
   }
 
-  const html = renderAdminSsoPage();
+  // ALLOWED_REDIRECT_ORIGINS からフロントエンド URL を抽出（auth-worker 自身を除外）
+  const frontendOrigins = (env.ALLOWED_REDIRECT_ORIGINS || "")
+    .split(",")
+    .map((s: string) => s.trim())
+    .filter((s: string) => s && s !== env.AUTH_WORKER_ORIGIN);
+  const html = renderAdminSsoPage(frontendOrigins);
   return new Response(html, {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });

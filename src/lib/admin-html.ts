@@ -3,7 +3,8 @@
  * Single-page app with inline JS for JWT auth + API calls
  */
 
-export function renderAdminSsoPage(): string {
+export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
+  const originsJson = JSON.stringify(frontendOrigins);
   return `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -101,6 +102,17 @@ export function renderAdminSsoPage(): string {
     .hidden { display: none; }
     .desc { font-size: 0.8rem; color: #6b7280; margin-bottom: 1.5rem; line-height: 1.5; }
     .field-desc { font-size: 0.75rem; color: #9ca3af; margin-top: -0.75rem; margin-bottom: 0.75rem; }
+    .url-list { margin-top: 0.5rem; }
+    .url-row {
+      display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;
+      background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 4px; padding: 0.375rem 0.5rem;
+    }
+    .url-row code { flex: 1; font-size: 0.75rem; color: #374151; word-break: break-all; }
+    .btn-copy {
+      padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; border-radius: 4px;
+      background: white; font-size: 0.7rem; cursor: pointer; white-space: nowrap;
+    }
+    .btn-copy:hover { background: #f3f4f6; }
   </style>
 </head>
 <body>
@@ -173,6 +185,7 @@ export function renderAdminSsoPage(): string {
     let editing = false;
     let enabled = true;
     let deleteProvider = '';
+    const frontendOrigins = \${originsJson};
 
     // Auth: read JWT from cookie (set by /admin/sso/callback)
     function initAuth() {
@@ -230,19 +243,26 @@ export function renderAdminSsoPage(): string {
         el.innerHTML = '<div class="empty">SSO \u30d7\u30ed\u30d0\u30a4\u30c0\u304c\u672a\u8a2d\u5b9a\u3067\u3059</div>';
         return;
       }
-      el.innerHTML = configs.map(c => \`
-        <div class="config-item">
-          <div class="config-info">
-            <div class="provider">\${escapeHtml(c.provider)}</div>
-            <div class="detail">\${escapeHtml(c.externalOrgId)} \u30fb Client ID: \${escapeHtml(c.clientId)}</div>
+      el.innerHTML = configs.map(c => {
+        const urls = c.externalOrgId && c.enabled ? frontendOrigins.map(origin =>
+          \`<div class="url-row"><code>\${escapeHtml(origin)}/?lw=\${escapeHtml(c.externalOrgId)}</code><button class="btn-copy" onclick="copyUrl(this, '\${escapeAttr(origin)}/?lw=\${escapeAttr(c.externalOrgId)}')">\u30b3\u30d4\u30fc</button></div>\`
+        ).join('') : '';
+        return \`
+        <div class="config-item" style="flex-direction:column;align-items:stretch;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div class="config-info">
+              <div class="provider">\${escapeHtml(c.provider)}</div>
+              <div class="detail">\${escapeHtml(c.externalOrgId)} \u30fb Client ID: \${escapeHtml(c.clientId)}</div>
+            </div>
+            <span class="badge \${c.enabled ? 'badge-green' : 'badge-gray'}">\${c.enabled ? '\u6709\u52b9' : '\u7121\u52b9'}</span>
+            <div class="config-actions">
+              <button class="btn btn-gray btn-sm" onclick="editConfig(\${escapeAttr(JSON.stringify(c))})">\u7de8\u96c6</button>
+              <button class="btn btn-red btn-sm" onclick="confirmDelete('\${escapeAttr(c.provider)}')">\u524a\u9664</button>
+            </div>
           </div>
-          <span class="badge \${c.enabled ? 'badge-green' : 'badge-gray'}">\${c.enabled ? '\u6709\u52b9' : '\u7121\u52b9'}</span>
-          <div class="config-actions">
-            <button class="btn btn-gray btn-sm" onclick="editConfig(\${escapeAttr(JSON.stringify(c))})">\u7de8\u96c6</button>
-            <button class="btn btn-red btn-sm" onclick="confirmDelete('\${escapeAttr(c.provider)}')">\u524a\u9664</button>
-          </div>
+          \${urls ? '<div class="url-list"><div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.25rem;">\u81ea\u52d5\u30ed\u30b0\u30a4\u30f3URL:</div>' + urls + '</div>' : ''}
         </div>
-      \`).join('');
+      \`}).join('');
     }
 
     function editConfig(config) {
@@ -345,6 +365,17 @@ export function renderAdminSsoPage(): string {
       } catch (e) {
         showMsg(e.message, 'error');
         closeDeleteModal();
+      }
+    }
+
+    async function copyUrl(btn, url) {
+      try {
+        await navigator.clipboard.writeText(url);
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+      } catch (e) {
+        showMsg('\u30b3\u30d4\u30fc\u5931\u6557: ' + e.message, 'error');
       }
     }
 
