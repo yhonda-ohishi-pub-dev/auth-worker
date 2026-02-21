@@ -44,6 +44,7 @@ export async function handleSsoList(
         hasClientSecret: c.hasClientSecret,
         externalOrgId: c.externalOrgId,
         enabled: c.enabled,
+        woffId: c.woffId,
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
       })),
@@ -70,6 +71,7 @@ export async function handleSsoUpsert(
     clientId: string;
     clientSecret: string;
     externalOrgId: string;
+    woffId?: string;
     enabled: boolean;
   };
 
@@ -86,6 +88,7 @@ export async function handleSsoUpsert(
       clientId: body.clientId,
       clientSecret: body.clientSecret || "",
       externalOrgId: body.externalOrgId,
+      woffId: body.woffId || "",
       enabled: body.enabled ?? true,
     });
     return jsonResponse({
@@ -93,6 +96,7 @@ export async function handleSsoUpsert(
       clientId: response.clientId,
       hasClientSecret: response.hasClientSecret,
       externalOrgId: response.externalOrgId,
+      woffId: response.woffId,
       enabled: response.enabled,
     });
   } catch (err) {

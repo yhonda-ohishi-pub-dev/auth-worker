@@ -157,6 +157,17 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
       <div class="field-desc">LINE WORKS \u306e\u5834\u5408\u306f\u30c9\u30e1\u30a4\u30f3\u540d\uff08\u30ed\u30b0\u30a4\u30f3\u6642\u306b user@<strong>\u3053\u306e\u5024</strong> \u3067\u7167\u5408\uff09</div>
       <input type="text" id="externalOrgId" placeholder="\u4f8b: ohishiunyusouko">
 
+      <label for="woffId">WOFF ID\uff08\u4efb\u610f\uff09</label>
+      <div class="field-desc">
+        LINE WORKS Developer Console \u2192 WOFF \u30a2\u30d7\u30ea \u3067\u767b\u9332\u3002
+        \u8a2d\u5b9a\u3059\u308b\u3068\u30a2\u30d7\u30ea\u5185\u3067 OAuth \u540c\u610f\u753b\u9762\u306a\u3057\u306b\u30ed\u30b0\u30a4\u30f3\u3067\u304d\u307e\u3059\u3002
+      </div>
+      <input type="text" id="woffId" placeholder="WOFF App \u767b\u9332\u5f8c\u306b\u767a\u884c\u3055\u308c\u308b ID">
+      <div id="woff-endpoint-hint" class="field-desc hidden" style="margin-top:-0.5rem;">
+        WOFF \u30a2\u30d7\u30ea\u306e\u30a8\u30f3\u30c9\u30dd\u30a4\u30f3\u30c8URL\u306b\u4ee5\u4e0b\u3092\u8a2d\u5b9a:
+        <div id="woff-endpoint-urls" class="url-list" style="margin-top:0.25rem;"></div>
+      </div>
+
       <div class="toggle-row">
         <label>\u6709\u52b9</label>
         <div id="enabled-toggle" class="toggle active" onclick="toggleEnabled()"></div>
@@ -245,15 +256,18 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
         return;
       }
       el.innerHTML = configs.map(c => {
-        const urls = c.externalOrgId && c.enabled ? frontendOrigins.map(origin =>
+        const oauthUrls = c.externalOrgId && c.enabled ? frontendOrigins.map(origin =>
           \`<div class="url-row"><code>\${escapeHtml(origin)}/?lw=\${escapeHtml(c.externalOrgId)}</code><button class="btn-copy" onclick="copyUrl(this, '\${escapeAttr(origin)}/?lw=\${escapeAttr(c.externalOrgId)}')">\u30b3\u30d4\u30fc</button></div>\`
+        ).join('') : '';
+        const woffUrls = c.woffId && c.externalOrgId && c.enabled ? frontendOrigins.map(origin =>
+          \`<div class="url-row"><code>\${escapeHtml(origin)}/?lw=\${escapeHtml(c.externalOrgId)}&woff</code><button class="btn-copy" onclick="copyUrl(this, '\${escapeAttr(origin)}/?lw=\${escapeAttr(c.externalOrgId)}&woff')">\u30b3\u30d4\u30fc</button></div>\`
         ).join('') : '';
         return \`
         <div class="config-item" style="flex-direction:column;align-items:stretch;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <div class="config-info">
               <div class="provider">\${escapeHtml(c.provider)}</div>
-              <div class="detail">\${escapeHtml(c.externalOrgId)} \u30fb Client ID: \${escapeHtml(c.clientId)}</div>
+              <div class="detail">\${escapeHtml(c.externalOrgId)} \u30fb Client ID: \${escapeHtml(c.clientId)}\${c.woffId ? ' \u30fb WOFF: ' + escapeHtml(c.woffId) : ''}</div>
             </div>
             <span class="badge \${c.enabled ? 'badge-green' : 'badge-gray'}">\${c.enabled ? '\u6709\u52b9' : '\u7121\u52b9'}</span>
             <div class="config-actions">
@@ -261,7 +275,8 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
               <button class="btn btn-red btn-sm" onclick="confirmDelete('\${escapeAttr(c.provider)}')">\u524a\u9664</button>
             </div>
           </div>
-          \${urls ? '<div class="url-list"><div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.25rem;">\u81ea\u52d5\u30ed\u30b0\u30a4\u30f3URL:</div>' + urls + '</div>' : ''}
+          \${oauthUrls ? '<div class="url-list"><div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.25rem;">OAuth \u30ed\u30b0\u30a4\u30f3URL:</div>' + oauthUrls + '</div>' : ''}
+          \${woffUrls ? '<div class="url-list"><div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.25rem;">WOFF \u30ed\u30b0\u30a4\u30f3URL\uff08\u30a2\u30d7\u30ea\u5185\u30fb\u540c\u610f\u753b\u9762\u306a\u3057\uff09:</div>' + woffUrls + '</div>' : ''}
         </div>
       \`}).join('');
     }
@@ -277,11 +292,13 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
         config.hasClientSecret ? '\u8a2d\u5b9a\u6e08\u307f\uff08\u5909\u66f4\u3059\u308b\u5834\u5408\u306e\u307f\u5165\u529b\uff09' : 'Client Secret';
       document.getElementById('secret-hint').classList.toggle('hidden', !config.hasClientSecret);
       document.getElementById('externalOrgId').value = config.externalOrgId;
+      document.getElementById('woffId').value = config.woffId || '';
       enabled = config.enabled;
       updateToggle();
       document.getElementById('cancel-btn').classList.remove('hidden');
       document.getElementById('save-btn').textContent = '\u66f4\u65b0';
       validateForm();
+      updateWoffEndpointHint();
     }
 
     function resetForm() {
@@ -294,11 +311,13 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
       document.getElementById('clientSecret').placeholder = 'Client Secret';
       document.getElementById('secret-hint').classList.add('hidden');
       document.getElementById('externalOrgId').value = '';
+      document.getElementById('woffId').value = '';
       enabled = true;
       updateToggle();
       document.getElementById('cancel-btn').classList.add('hidden');
       document.getElementById('save-btn').textContent = '\u8ffd\u52a0';
       validateForm();
+      updateWoffEndpointHint();
       clearMsg();
     }
 
@@ -332,6 +351,7 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
           clientId: document.getElementById('clientId').value,
           clientSecret: document.getElementById('clientSecret').value,
           externalOrgId: document.getElementById('externalOrgId').value,
+          woffId: document.getElementById('woffId').value,
           enabled: enabled,
         });
         showMsg('\u4fdd\u5b58\u3057\u307e\u3057\u305f', 'success');
@@ -387,11 +407,28 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
       return String(s).replace(/'/g,"\\\\'").replace(/"/g,'&quot;');
     }
 
+    function updateWoffEndpointHint() {
+      const orgId = document.getElementById('externalOrgId').value.trim();
+      const woffId = document.getElementById('woffId').value.trim();
+      const hint = document.getElementById('woff-endpoint-hint');
+      const urlsEl = document.getElementById('woff-endpoint-urls');
+      if (woffId && orgId) {
+        urlsEl.innerHTML = frontendOrigins.map(origin => {
+          const url = origin + '/?lw=' + encodeURIComponent(orgId) + '&woff';
+          return '<div class="url-row"><code>' + escapeHtml(url) + '</code><button class="btn-copy" onclick="copyUrl(this, \\'' + escapeAttr(url) + '\\')">\u30b3\u30d4\u30fc</button></div>';
+        }).join('');
+        hint.classList.remove('hidden');
+      } else {
+        hint.classList.add('hidden');
+      }
+    }
+
     // Init
     document.getElementById('provider').addEventListener('change', validateForm);
     document.getElementById('clientId').addEventListener('input', validateForm);
     document.getElementById('clientSecret').addEventListener('input', validateForm);
-    document.getElementById('externalOrgId').addEventListener('input', validateForm);
+    document.getElementById('externalOrgId').addEventListener('input', () => { validateForm(); updateWoffEndpointHint(); });
+    document.getElementById('woffId').addEventListener('input', updateWoffEndpointHint);
 
     initAuth();
     loadConfigs();
