@@ -163,6 +163,31 @@ export const useAuth = () => {
     window.location.href = `${authWorkerUrl}/login?redirect_uri=${encodeURIComponent(redirectUri)}`
   }
 
+  /** LINE WORKS 自動ログイン URL を生成 */
+  function getLwLoginUrl(): string | null {
+    if (typeof window === 'undefined') return null
+    const lwDomain = getLwDomain()
+    if (!lwDomain) return null
+    return `${window.location.origin}/?lw=${encodeURIComponent(lwDomain)}`
+  }
+
+  /** LINE WORKS 自動ログイン URL をクリップボードにコピー */
+  async function copyLwLoginUrl(): Promise<boolean> {
+    const url = getLwLoginUrl()
+    if (!url) return false
+    try {
+      await navigator.clipboard.writeText(url)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /** auth-worker の設定ページ URL を取得 */
+  function getSettingsUrl(): string {
+    return `${authWorkerUrl}/admin/sso`
+  }
+
   const isAuthenticated = computed(() => {
     if (!authState.value) return false
     const now = Math.floor(Date.now() / 1000)
@@ -184,5 +209,8 @@ export const useAuth = () => {
     saveLwDomain,
     getLwDomain,
     clearLwDomain,
+    getLwLoginUrl,
+    copyLwLoginUrl,
+    getSettingsUrl,
   }
 }
