@@ -265,6 +265,13 @@ export const useAuth = () => {
     return `${authWorkerUrl}/admin/sso`
   }
 
+  // ownerType: 'org' | 'personal' — AuthToolbar が org slug 表示を自動制御するために使用
+  const ownerType = useState<string>('auth_owner_type', () => 'org')
+
+  function setOwnerType(type: string): void {
+    ownerType.value = type
+  }
+
   const isAuthenticated = computed(() => {
     if (!authState.value) return false
     const now = Math.floor(Date.now() / 1000)
@@ -307,5 +314,7 @@ export const useAuth = () => {
     getLwLoginUrl,
     copyLwLoginUrl,
     getSettingsUrl,
+    ownerType,
+    setOwnerType,
   }
 }

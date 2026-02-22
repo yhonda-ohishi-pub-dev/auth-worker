@@ -2,7 +2,7 @@
   <div class="flex items-center gap-1">
     <!-- Org slug display -->
     <span
-      v-if="showOrgSlug && isAuthenticated && orgSlug"
+      v-if="showOrgSlug && isAuthenticated && orgSlug && ownerType !== 'personal'"
       class="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 whitespace-nowrap"
     >
       {{ orgSlug }}
@@ -81,7 +81,7 @@ const emit = defineEmits<{
   (e: 'open-settings', url: string): void
 }>()
 
-const { logout, copyLwLoginUrl, getSettingsUrl, getLwDomain, isAuthenticated, username, provider, providerLabel, orgSlug } = useAuth()
+const { logout, copyLwLoginUrl, getSettingsUrl, getLwDomain, isAuthenticated, username, provider, providerLabel, orgSlug, ownerType } = useAuth()
 
 const hasLwDomain = computed(() => !!getLwDomain())
 
