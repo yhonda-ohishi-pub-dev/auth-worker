@@ -1,5 +1,13 @@
 <template>
   <div class="flex items-center gap-1">
+    <!-- Org slug display -->
+    <span
+      v-if="showOrgSlug && isAuthenticated && orgSlug"
+      class="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 whitespace-nowrap"
+    >
+      {{ orgSlug }}
+    </span>
+
     <!-- User info display -->
     <span
       v-if="showUserInfo && isAuthenticated && username"
@@ -58,11 +66,13 @@ const props = withDefaults(defineProps<{
   showSettings?: boolean
   showLogout?: boolean
   showUserInfo?: boolean
+  showOrgSlug?: boolean
 }>(), {
   showCopyUrl: true,
   showSettings: true,
   showLogout: true,
   showUserInfo: true,
+  showOrgSlug: false,
 })
 
 const emit = defineEmits<{
@@ -71,7 +81,7 @@ const emit = defineEmits<{
   (e: 'open-settings', url: string): void
 }>()
 
-const { logout, copyLwLoginUrl, getSettingsUrl, getLwDomain, isAuthenticated, username, provider, providerLabel } = useAuth()
+const { logout, copyLwLoginUrl, getSettingsUrl, getLwDomain, isAuthenticated, username, provider, providerLabel, orgSlug } = useAuth()
 
 const hasLwDomain = computed(() => !!getLwDomain())
 

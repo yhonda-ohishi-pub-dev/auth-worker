@@ -29,15 +29,17 @@ export interface AuthState {
   expiresAt: number // unix timestamp (seconds)
   username?: string   // JWT username claim (email or display name)
   provider?: string   // 'google' | 'lineworks' | 'password'
+  orgSlug?: string    // organization slug from JWT org_slug claim
 }
 
 /** JWT payload から username と provider を安全に取り出す */
-function decodeJwtClaims(token: string): { username?: string; provider?: string } {
+function decodeJwtClaims(token: string): { username?: string; provider?: string; orgSlug?: string } {
   try {
     const payload = JSON.parse(atob(token.split('.')[1]))
     return {
       username: payload.username || undefined,
       provider: payload.provider || undefined,
+      orgSlug: payload.org_slug || undefined,
     }
   } catch {
     return {}
@@ -110,10 +112,11 @@ export const useAuth = () => {
       const now = Math.floor(Date.now() / 1000)
       if (stored.expiresAt > now) {
         // 既存の localStorage に username/provider がない場合、JWT からバックフィル
-        if (!stored.username || !stored.provider) {
-          const { username, provider } = decodeJwtClaims(stored.token)
+        if (!stored.username || !stored.provider || !stored.orgSlug) {
+          const { username, provider, orgSlug } = decodeJwtClaims(stored.token)
           stored.username = username
           stored.provider = provider
+          stored.orgSlug = orgSlug
           writeStorage(stored)
         }
         authState.value = stored
@@ -155,8 +158,8 @@ export const useAuth = () => {
       expiresAt = Math.floor(Date.now() / 1000) + 86400
     }
 
-    const { username, provider } = decodeJwtClaims(token)
-    const state: AuthState = { token, orgId, expiresAt, username, provider }
+    const { username, provider, orgSlug } = decodeJwtClaims(token)
+    const state: AuthState = { token, orgId, expiresAt, username, provider, orgSlug }
     writeStorage(state)
     authState.value = state
 
@@ -185,6 +188,7 @@ export const useAuth = () => {
         expiresAt: payload.exp,
         username: payload.username || undefined,
         provider: payload.provider || undefined,
+        orgSlug: payload.org_slug || undefined,
       }
       authState.value = state
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state))
@@ -271,6 +275,7 @@ export const useAuth = () => {
   const orgId = computed(() => authState.value?.orgId ?? null)
   const username = computed(() => authState.value?.username ?? null)
   const provider = computed(() => authState.value?.provider ?? null)
+  const orgSlug = computed(() => authState.value?.orgSlug ?? null)
 
   /** プロバイダの表示名 */
   const providerLabel = computed(() => {
@@ -287,6 +292,7 @@ export const useAuth = () => {
     isAuthenticated,
     token,
     orgId,
+    orgSlug,
     username,
     provider,
     providerLabel,
