@@ -234,10 +234,11 @@ export async function uploadImage(
     const body = await attachRes.text();
     throw new Error(`attachments failed: ${attachRes.status} ${body}`);
   }
-  const { fileId, uploadUrl } = (await attachRes.json()) as {
+  const attachData = (await attachRes.json()) as {
     fileId: string;
     uploadUrl: string;
   };
+  console.log(JSON.stringify({ event: "upload_step1", fileId: attachData.fileId, uploadUrl: attachData.uploadUrl }));
 
   // Step 2: Upload binary to uploadUrl (POST multipart/form-data per LINE WORKS spec)
   const contentType = fileName.toLowerCase().endsWith(".png")
@@ -248,16 +249,29 @@ export async function uploadImage(
   form.append("resourceName", fileName);
   form.append("Filedata", blob, fileName);
 
-  const uploadRes = await fetch(uploadUrl, {
+  const uploadRes = await fetch(attachData.uploadUrl, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
     body: form,
   });
+  const uploadBody = await uploadRes.text();
+  console.log(JSON.stringify({ event: "upload_step2", status: uploadRes.status, body: uploadBody }));
   if (!uploadRes.ok) {
-    const body = await uploadRes.text();
-    throw new Error(`image upload failed: ${uploadRes.status} ${body}`);
+    throw new Error(`image upload failed: ${uploadRes.status} ${uploadBody}`);
+  }
+
+  // Use fileId from upload response if available, fallback to Step 1's fileId
+  let fileId = attachData.fileId;
+  try {
+    const uploadJson = JSON.parse(uploadBody);
+    if (uploadJson.fileId) {
+      fileId = uploadJson.fileId;
+      console.log(JSON.stringify({ event: "upload_step2_fileId", step1: attachData.fileId, step2: uploadJson.fileId, match: attachData.fileId === uploadJson.fileId }));
+    }
+  } catch {
+    // upload response may not be JSON
   }
 
   // Step 3: Associate image with richmenu
@@ -269,9 +283,24 @@ export async function uploadImage(
     },
     body: JSON.stringify({ fileId }),
   });
+  const imageBody = await imageRes.text();
+  console.log(JSON.stringify({ event: "upload_step3", status: imageRes.status, body: imageBody, fileId }));
   if (!imageRes.ok) {
-    const body = await imageRes.text();
-    throw new Error(`image association failed: ${imageRes.status} ${body}`);
+    throw new Error(`image association failed: ${imageRes.status} ${imageBody}`);
+  }
+}
+
+/** Check if a rich menu has an image by trying to GET the image endpoint */
+export async function checkRichMenuImage(
+  creds: BotCredentials,
+  richmenuId: string,
+): Promise<boolean> {
+  try {
+    const res = await botFetch(creds, `/richmenus/${richmenuId}/image`);
+    console.log(JSON.stringify({ event: "check_image", richmenuId, status: res.status, contentType: res.headers.get("content-type"), contentLength: res.headers.get("content-length") }));
+    return res.ok;
+  } catch {
+    return false;
   }
 }
 

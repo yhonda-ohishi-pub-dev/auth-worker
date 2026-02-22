@@ -46,6 +46,8 @@ export function renderAdminRichMenuPage(): string {
       font-size: 0.75rem; font-weight: 500;
     }
     .badge-green { background: #dcfce7; color: #166534; }
+    .badge-yellow { background: #fef9c3; color: #854d0e; }
+    .badge-red { background: #fef2f2; color: #dc2626; }
     .badge-blue { background: #dbeafe; color: #1e40af; }
     .btn {
       padding: 0.5rem 1rem; border: none; border-radius: 6px; font-size: 0.875rem;
@@ -105,6 +107,22 @@ export function renderAdminRichMenuPage(): string {
     .area-bounds input { width: 70px; }
     .area-action { flex: 1; min-width: 200px; }
     .area-action input, .area-action select { width: 100%; }
+    .area-img-settings {
+      display: flex; gap: 0.375rem; align-items: center; flex-wrap: wrap;
+      margin-top: 0.25rem; padding-top: 0.375rem; border-top: 1px dashed #d1d5db;
+      width: 100%;
+    }
+    .area-img-settings label {
+      font-size: 0.7rem; color: #6b7280; margin-bottom: 0; white-space: nowrap;
+    }
+    .area-img-settings input[type="text"],
+    .area-img-settings input[type="number"] {
+      width: 80px; padding: 0.25rem 0.375rem; font-size: 0.8rem; margin-bottom: 0;
+    }
+    .area-img-settings input[type="color"] {
+      width: 32px; height: 28px; padding: 0; border: 1px solid #d1d5db;
+      border-radius: 4px; cursor: pointer; margin-bottom: 0;
+    }
     .preset-btns { display: flex; gap: 0.25rem; margin-bottom: 0.75rem; flex-wrap: wrap; }
     .preset-btn {
       padding: 0.25rem 0.5rem; border: 1px solid #d1d5db; border-radius: 4px;
@@ -173,6 +191,18 @@ export function renderAdminRichMenuPage(): string {
 
       <button class="btn btn-gray btn-sm" onclick="addArea()" style="margin-bottom:1rem;">+ \u30a8\u30ea\u30a2\u8ffd\u52a0</button>
 
+      <!-- Preview canvas -->
+      <div id="preview-section" class="hidden" style="margin-bottom:1rem;">
+        <label>\u30d7\u30ec\u30d3\u30e5\u30fc</label>
+        <div style="border:1px solid #d1d5db;border-radius:6px;overflow:hidden;display:inline-block;">
+          <canvas id="preview-canvas" style="width:100%;max-width:500px;height:auto;display:block;"></canvas>
+        </div>
+        <div style="margin-top:0.5rem;display:flex;gap:0.5rem;">
+          <button class="btn btn-primary btn-sm" onclick="previewAll()">\u5168\u30a8\u30ea\u30a2\u63cf\u753b</button>
+          <button id="upload-img-btn" class="btn btn-green btn-sm hidden" onclick="uploadPreviewImage()">\u30a2\u30c3\u30d7\u30ed\u30fc\u30c9</button>
+        </div>
+      </div>
+
       <div class="form-actions">
         <button id="cancel-edit-btn" class="btn btn-gray hidden" onclick="cancelEdit()">\u30ad\u30e3\u30f3\u30bb\u30eb</button>
         <button id="create-btn" class="btn btn-primary" onclick="handleCreateMenu()" disabled>\u4f5c\u6210</button>
@@ -199,6 +229,7 @@ export function renderAdminRichMenuPage(): string {
     let areas = [];
     let editingMenuId = null; // non-null when editing existing menu
     let currentMenus = []; // cached menu list for image generation
+    let imageStatus = {}; // richmenuId → boolean (has image)
 
     function initAuth() {
       const match = document.cookie.match(/sso_admin_token=([^;]+)/);
@@ -301,6 +332,7 @@ export function renderAdminRichMenuPage(): string {
 
       try {
         const data = await api('/api/richmenu/list', { botConfigId: selectedBotId });
+        imageStatus = data.imageStatus || {};
         renderMenus(data.richmenus || [], data.defaultRichmenuId);
       } catch (e) {
         el.innerHTML = '<div class="error">' + escapeHtml(e.message) + '</div>';
@@ -316,6 +348,7 @@ export function renderAdminRichMenuPage(): string {
       }
       el.innerHTML = menus.map(m => {
         const isDefault = m.richmenuId === defaultId;
+        const hasImage = !!imageStatus[m.richmenuId];
         const areasSummary = (m.areas || []).map((a, i) =>
           '<div style="font-size:0.75rem;color:#6b7280;">' +
           '\u30a8\u30ea\u30a2' + (i+1) + ': ' + escapeHtml(a.action.type) +
@@ -330,6 +363,9 @@ export function renderAdminRichMenuPage(): string {
           <div class="menu-header">
             <span class="menu-name">\${escapeHtml(m.richmenuName)}</span>
             <div style="display:flex;gap:0.25rem;align-items:center;">
+              \${hasImage
+                ? '<span class="badge badge-green">\u753b\u50cf\u3042\u308a</span>'
+                : '<span class="badge badge-yellow">\u753b\u50cf\u306a\u3057</span>'}
               \${isDefault ? '<span class="badge badge-green">\u30c7\u30d5\u30a9\u30eb\u30c8</span>' : ''}
               <span class="badge badge-blue">\${m.size.width}x\${m.size.height}</span>
             </div>
@@ -362,43 +398,21 @@ export function renderAdminRichMenuPage(): string {
     async function generateAndUploadImage(richmenuId) {
       const menu = currentMenus.find(m => m.richmenuId === richmenuId);
       if (!menu) { showMsg('\u30e1\u30cb\u30e5\u30fc\u304c\u898b\u3064\u304b\u308a\u307e\u305b\u3093', 'error'); return; }
-      const width = menu.size.width;
-      const height = menu.size.height;
-      const menuAreas = menu.areas || [];
+      const imgAreas = (menu.areas || []).map((a, i) => ({
+        bounds: a.bounds,
+        action: a.action,
+        img: { text: a.action.label || '', textColor: '#ffffff', fontSize: 80, bgColor: AREA_COLORS[i % AREA_COLORS.length] },
+      }));
 
       showMsg('\u753b\u50cf\u751f\u6210\u4e2d...', 'success');
       try {
         const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = menu.size.width;
+        canvas.height = menu.size.height;
         const ctx = canvas.getContext('2d');
-
-        // Background
         ctx.fillStyle = '#f0f0f0';
-        ctx.fillRect(0, 0, width, height);
-
-        // Draw each area
-        menuAreas.forEach((a, i) => {
-          const color = AREA_COLORS[i % AREA_COLORS.length];
-          const b = a.bounds;
-
-          // Fill with semi-transparent color
-          ctx.fillStyle = color + '30';
-          ctx.fillRect(b.x, b.y, b.width, b.height);
-
-          // Border
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 6;
-          ctx.strokeRect(b.x + 3, b.y + 3, b.width - 6, b.height - 6);
-
-          // Label text
-          const label = a.action.label || a.action.type || ('Area ' + (i + 1));
-          ctx.fillStyle = color;
-          ctx.font = 'bold 80px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(label, b.x + b.width / 2, b.y + b.height / 2);
-        });
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        imgAreas.forEach((a, i) => drawArea(ctx, a, i));
 
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         const formData = new FormData();
@@ -406,7 +420,9 @@ export function renderAdminRichMenuPage(): string {
         formData.append('richmenuId', richmenuId);
         formData.append('image', blob, 'richmenu.png');
         await apiFormData('/api/richmenu/image', formData);
+        imageStatus[richmenuId] = true;
         showMsg('\u753b\u50cf\u3092\u751f\u6210\u30fb\u30a2\u30c3\u30d7\u30ed\u30fc\u30c9\u3057\u307e\u3057\u305f', 'success');
+        await loadMenus();
       } catch (e) {
         showMsg(e.message, 'error');
       }
@@ -427,7 +443,9 @@ export function renderAdminRichMenuPage(): string {
         formData.append('richmenuId', richmenuId);
         formData.append('image', file);
         await apiFormData('/api/richmenu/image', formData);
+        imageStatus[richmenuId] = true;
         showMsg('\u753b\u50cf\u3092\u30a2\u30c3\u30d7\u30ed\u30fc\u30c9\u3057\u307e\u3057\u305f', 'success');
+        await loadMenus();
       } catch (e) {
         showMsg(e.message, 'error');
       }
@@ -488,9 +506,10 @@ export function renderAdminRichMenuPage(): string {
         editingMenuId = richmenuId;
         document.getElementById('menu-name').value = menu.richmenuName;
         document.getElementById('menu-size').value = String(menu.size.height);
-        areas = (menu.areas || []).map(a => ({
+        areas = (menu.areas || []).map((a, i) => ({
           bounds: { ...a.bounds },
           action: { ...a.action },
+          img: { text: a.action.label || '', textColor: '#ffffff', fontSize: 80, bgColor: AREA_COLORS[i % AREA_COLORS.length] },
         }));
         renderAreas();
         validateCreateForm();
@@ -498,6 +517,9 @@ export function renderAdminRichMenuPage(): string {
         document.getElementById('form-title').textContent = '\u30e1\u30cb\u30e5\u30fc\u7de8\u96c6';
         document.getElementById('create-btn').textContent = '\u66f4\u65b0';
         document.getElementById('cancel-edit-btn').classList.remove('hidden');
+        document.getElementById('preview-section').classList.remove('hidden');
+        document.getElementById('upload-img-btn').classList.remove('hidden');
+        initPreviewCanvas();
 
         document.getElementById('create-section').scrollIntoView({ behavior: 'smooth' });
       }).catch(e => showMsg(e.message, 'error'));
@@ -512,6 +534,8 @@ export function renderAdminRichMenuPage(): string {
       document.getElementById('form-title').textContent = '\u65b0\u898f\u30e1\u30cb\u30e5\u30fc\u4f5c\u6210';
       document.getElementById('create-btn').textContent = '\u4f5c\u6210';
       document.getElementById('cancel-edit-btn').classList.add('hidden');
+      document.getElementById('preview-section').classList.add('hidden');
+      document.getElementById('upload-img-btn').classList.add('hidden');
     }
 
     // ========== Create menu ==========
@@ -537,6 +561,7 @@ export function renderAdminRichMenuPage(): string {
       const area = {
         bounds,
         action: { type: 'uri', label: '', uri: '' },
+        img: { text: '', textColor: '#ffffff', fontSize: 80, bgColor: AREA_COLORS[areas.length % AREA_COLORS.length] },
       };
       areas.push(area);
       renderAreas();
@@ -580,6 +605,17 @@ export function renderAdminRichMenuPage(): string {
               : '<input type="text" placeholder="postback data" value="' + escapeHtml(a.action.data||'') + '" oninput="updateAreaField(' + i + ',\\'data\\',this.value)">'}
           </div>
           <button class="btn btn-red btn-sm" onclick="removeArea(\${i})" style="align-self:flex-start;margin-top:1.25rem;">\u00d7</button>
+          <div class="area-img-settings">
+            <label>\u753b\u50cf:</label>
+            <input type="text" placeholder="\u30c6\u30ad\u30b9\u30c8" value="\${escapeHtml(a.img?.text||'')}" oninput="updateImg(\${i},'text',this.value)" style="width:120px;" title="\u753b\u50cf\u30c6\u30ad\u30b9\u30c8">
+            <label>\u8272</label>
+            <input type="color" value="\${a.img?.textColor||'#ffffff'}" oninput="updateImg(\${i},'textColor',this.value)" title="\u30c6\u30ad\u30b9\u30c8\u8272">
+            <label>px</label>
+            <input type="number" value="\${a.img?.fontSize||80}" oninput="updateImg(\${i},'fontSize',parseInt(this.value)||80)" style="width:60px;" title="\u30d5\u30a9\u30f3\u30c8\u30b5\u30a4\u30ba">
+            <label>\u80cc\u666f</label>
+            <input type="color" value="\${a.img?.bgColor||'#3b82f6'}" oninput="updateImg(\${i},'bgColor',this.value)" title="\u80cc\u666f\u8272">
+            <button class="btn btn-primary btn-sm" onclick="previewArea(\${i})" style="margin-left:auto;padding:0.2rem 0.5rem;font-size:0.7rem;">\u63cf\u753b</button>
+          </div>
         </div>
       \`).join('');
     }
@@ -602,6 +638,86 @@ export function renderAdminRichMenuPage(): string {
     function updateAreaField(index, field, value) {
       areas[index].action[field] = value;
       validateCreateForm();
+    }
+
+    function updateImg(index, field, value) {
+      if (!areas[index].img) areas[index].img = { text: '', textColor: '#ffffff', fontSize: 80, bgColor: '#3b82f6' };
+      areas[index].img[field] = value;
+    }
+
+    // ========== Preview Canvas ==========
+
+    function initPreviewCanvas() {
+      const canvas = document.getElementById('preview-canvas');
+      const menu = currentMenus.find(m => m.richmenuId === editingMenuId);
+      const w = menu ? menu.size.width : 2500;
+      const h = menu ? menu.size.height : getMenuHeight();
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    function drawArea(ctx, a, i) {
+      const img = a.img || {};
+      const bgColor = img.bgColor || AREA_COLORS[i % AREA_COLORS.length];
+      const textColor = img.textColor || '#ffffff';
+      const fontSize = img.fontSize || 80;
+      const text = img.text || a.action.label || a.action.type || ('Area ' + (i + 1));
+      const b = a.bounds;
+
+      ctx.fillStyle = bgColor;
+      ctx.fillRect(b.x, b.y, b.width, b.height);
+
+      ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(b.x + 2, b.y + 2, b.width - 4, b.height - 4);
+
+      ctx.fillStyle = textColor;
+      ctx.font = 'bold ' + fontSize + 'px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, b.x + b.width / 2, b.y + b.height / 2);
+    }
+
+    function previewArea(index) {
+      const canvas = document.getElementById('preview-canvas');
+      if (!canvas.width || canvas.width === 300) initPreviewCanvas();
+      const ctx = canvas.getContext('2d');
+      const a = areas[index];
+      // Clear this area first
+      ctx.fillStyle = '#f0f0f0';
+      ctx.fillRect(a.bounds.x, a.bounds.y, a.bounds.width, a.bounds.height);
+      drawArea(ctx, a, index);
+      document.getElementById('preview-section').classList.remove('hidden');
+      document.getElementById('upload-img-btn').classList.remove('hidden');
+    }
+
+    function previewAll() {
+      initPreviewCanvas();
+      const canvas = document.getElementById('preview-canvas');
+      const ctx = canvas.getContext('2d');
+      areas.forEach((a, i) => drawArea(ctx, a, i));
+    }
+
+    async function uploadPreviewImage() {
+      if (!editingMenuId) { showMsg('\u7de8\u96c6\u30e2\u30fc\u30c9\u3067\u306e\u307f\u30a2\u30c3\u30d7\u30ed\u30fc\u30c9\u53ef\u80fd', 'error'); return; }
+      const canvas = document.getElementById('preview-canvas');
+      showMsg('\u30a2\u30c3\u30d7\u30ed\u30fc\u30c9\u4e2d...', 'success');
+      try {
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        const formData = new FormData();
+        formData.append('botConfigId', selectedBotId);
+        formData.append('richmenuId', editingMenuId);
+        formData.append('image', blob, 'richmenu.png');
+        await apiFormData('/api/richmenu/image', formData);
+        imageStatus[editingMenuId] = true;
+        showMsg('\u753b\u50cf\u3092\u30a2\u30c3\u30d7\u30ed\u30fc\u30c9\u3057\u307e\u3057\u305f', 'success');
+        await loadMenus();
+      } catch (e) {
+        showMsg(e.message, 'error');
+      }
     }
 
     function validateCreateForm() {
@@ -628,8 +744,30 @@ export function renderAdminRichMenuPage(): string {
       };
 
       try {
-        await api('/api/richmenu/create', menuData);
+        const result = await api('/api/richmenu/create', menuData);
+        const newMenuId = result.richmenuId;
+
         if (isEdit) {
+          // Generate and upload image to the NEW menu (edit = create new + delete old, so image must be re-uploaded)
+          if (newMenuId && areas.length > 0) {
+            try {
+              const canvas = document.createElement('canvas');
+              canvas.width = menuData.size.width;
+              canvas.height = menuData.size.height;
+              const ctx = canvas.getContext('2d');
+              ctx.fillStyle = '#f0f0f0';
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              areas.forEach((a, i) => drawArea(ctx, a, i));
+              const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+              const formData = new FormData();
+              formData.append('botConfigId', selectedBotId);
+              formData.append('richmenuId', newMenuId);
+              formData.append('image', blob, 'richmenu.png');
+              await apiFormData('/api/richmenu/image', formData);
+            } catch (imgErr) {
+              console.error('Image re-upload to new menu failed:', imgErr);
+            }
+          }
           try {
             await api('/api/richmenu/delete', { botConfigId: selectedBotId, richmenuId: editingMenuId });
           } catch (delErr) {

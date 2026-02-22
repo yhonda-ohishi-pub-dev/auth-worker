@@ -20,11 +20,11 @@ export function renderLoginPage(params: LoginPageParams): string {
     : "";
 
   const googleButtonHtml = googleEnabled
-    ? `<div class="divider"><span>or</span></div>
-       <a href="${escapeHtml(googleRedirectUrl)}" class="google-btn">
+    ? `<a href="${escapeHtml(googleRedirectUrl)}" class="google-btn">
          <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.997 8.997 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58Z"/></svg>
          Sign in with Google
-       </a>`
+       </a>
+       <div class="divider"><span>or</span></div>`
     : "";
 
   return `<!DOCTYPE html>
@@ -138,6 +138,20 @@ export function renderLoginPage(params: LoginPageParams): string {
       font-size: 0.875rem;
     }
     .lw-form button:hover { background: #009a00; }
+    .pw-section { display: none; margin-top: 1rem; }
+    .pw-toggle {
+      display: block;
+      margin: 1.25rem auto 0;
+      padding: 0.5rem 1rem;
+      background: none;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      color: #888;
+      font-size: 0.8rem;
+      cursor: pointer;
+      width: auto;
+    }
+    .pw-toggle:hover { background: #f9fafb; color: #555; }
     .clear-btn {
       display: block;
       margin: 1.25rem auto 0;
@@ -163,28 +177,34 @@ export function renderLoginPage(params: LoginPageParams): string {
   <div class="container">
     <h1>Logi Login</h1>
     ${errorHtml}
-    <form method="POST" action="/auth/login">
-      <input type="hidden" name="redirect_uri" value="${escapeHtml(redirectUri)}">
-      <label for="organization_id">Organization ID</label>
-      <input type="text" id="organization_id" name="organization_id"
-             value="${escapeHtml(orgId || "00000000-0000-0000-0000-000000000001")}" required>
-      <label for="username">Username</label>
-      <input type="text" id="username" name="username" autocomplete="username" required autofocus>
-      <label for="password">Password</label>
-      <input type="password" id="password" name="password" autocomplete="current-password" required>
-      <button type="submit">Login</button>
-    </form>
     ${googleButtonHtml}
-    <div class="divider"><span>or</span></div>
     <label for="lw_address">LINE WORKS</label>
     <form class="lw-form" action="${escapeHtml(lineworksRedirectUrl)}" method="GET">
       <input type="hidden" name="redirect_uri" value="${escapeHtml(redirectUri)}">
-      <input type="text" id="lw_address" name="address" placeholder="user@domain" autocomplete="on">
+      <input type="text" id="lw_address" name="address" placeholder="user@domain" autocomplete="on" autofocus>
       <button type="submit">Login</button>
     </form>
+    <button class="pw-toggle" onclick="togglePwLogin()">パスワードログイン</button>
+    <div id="pw-section" class="pw-section">
+      <form method="POST" action="/auth/login">
+        <input type="hidden" name="redirect_uri" value="${escapeHtml(redirectUri)}">
+        <label for="organization_id">Organization ID</label>
+        <input type="text" id="organization_id" name="organization_id"
+               value="${escapeHtml(orgId || "00000000-0000-0000-0000-000000000001")}" required>
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" autocomplete="username" required>
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="current-password" required>
+        <button type="submit">Login</button>
+      </form>
+    </div>
     <button class="clear-btn" onclick="clearAllCookies()">Cookie をクリア</button>
     <div id="clear-msg" class="clear-msg" style="display:none">クリアしました。ページをリロードします...</div>
     <script>
+    function togglePwLogin() {
+      var s = document.getElementById('pw-section');
+      s.style.display = s.style.display === 'none' ? 'block' : 'none';
+    }
     function clearAllCookies() {
       var names = ['lw_domain', 'logi_auth_token', 'logi_auth'];
       var parts = location.hostname.split('.');

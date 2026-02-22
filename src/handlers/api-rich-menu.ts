@@ -13,6 +13,7 @@ import {
   createRichMenu,
   deleteRichMenu,
   uploadImage,
+  checkRichMenuImage,
   setDefaultRichMenu,
   getDefaultRichMenu,
   deleteDefaultRichMenu,
@@ -71,9 +72,18 @@ export async function handleRichMenuList(
       listRichMenus(creds),
       getDefaultRichMenu(creds),
     ]);
+    // Check image status for each menu in parallel
+    const imageChecks = await Promise.all(
+      richmenus.map((m) => checkRichMenuImage(creds, m.richmenuId)),
+    );
+    const imageStatus: Record<string, boolean> = {};
+    richmenus.forEach((m, i) => {
+      imageStatus[m.richmenuId] = imageChecks[i] ?? false;
+    });
     return jsonResponse({
       richmenus,
       defaultRichmenuId: defaultMenu?.defaultRichmenuId || null,
+      imageStatus,
     });
   } catch (err) {
     if (err instanceof ConnectError) {

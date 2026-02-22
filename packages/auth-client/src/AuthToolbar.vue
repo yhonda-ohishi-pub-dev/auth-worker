@@ -1,5 +1,25 @@
 <template>
   <div class="flex items-center gap-1">
+    <!-- User info display -->
+    <span
+      v-if="showUserInfo && isAuthenticated && username"
+      class="text-sm text-gray-600 truncate max-w-[200px]"
+      :title="username"
+    >
+      {{ displayUsername }}
+    </span>
+    <span
+      v-if="showUserInfo && isAuthenticated && providerLabel"
+      class="text-xs px-1.5 py-0.5 rounded whitespace-nowrap"
+      :class="{
+        'bg-blue-100 text-blue-700': provider === 'google',
+        'bg-green-100 text-green-700': provider === 'lineworks',
+        'bg-gray-100 text-gray-600': provider === 'password',
+      }"
+    >
+      {{ providerLabel }}
+    </span>
+
     <component
       v-if="showCopyUrl && hasLwDomain"
       :is="uButton"
@@ -37,10 +57,12 @@ const props = withDefaults(defineProps<{
   showCopyUrl?: boolean
   showSettings?: boolean
   showLogout?: boolean
+  showUserInfo?: boolean
 }>(), {
   showCopyUrl: true,
   showSettings: true,
   showLogout: true,
+  showUserInfo: true,
 })
 
 const emit = defineEmits<{
@@ -49,9 +71,17 @@ const emit = defineEmits<{
   (e: 'open-settings', url: string): void
 }>()
 
-const { logout, copyLwLoginUrl, getSettingsUrl, getLwDomain } = useAuth()
+const { logout, copyLwLoginUrl, getSettingsUrl, getLwDomain, isAuthenticated, username, provider, providerLabel } = useAuth()
 
 const hasLwDomain = computed(() => !!getLwDomain())
+
+/** メールアドレスの場合は@以前だけ表示 */
+const displayUsername = computed(() => {
+  const name = username.value
+  if (!name) return ''
+  if (name.includes('@')) return name.split('@')[0]
+  return name
+})
 
 const uButton = computed(() => {
   const resolved = resolveComponent('UButton')

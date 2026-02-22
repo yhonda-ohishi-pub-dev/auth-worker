@@ -14,6 +14,7 @@ import {
 import { handleAdminRichMenuPage, handleAdminRichMenuCallback } from "./handlers/admin-rich-menu";
 import { handleWoffAuth, handleWoffConfig } from "./handlers/woff-auth";
 import { handleTopPage } from "./handlers/top-page";
+import { handleLogout } from "./handlers/logout";
 
 export interface Env {
   GRPC_PROXY: Fetcher;
@@ -67,6 +68,8 @@ export default {
             return await handleAdminRichMenuPage(request, env);
           case "/admin/rich-menu/callback":
             return await handleAdminRichMenuCallback();
+          case "/logout":
+            return await handleLogout(request, env);
           default:
             return errorResponse(404, "Not found");
         }

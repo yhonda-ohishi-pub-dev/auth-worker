@@ -11,8 +11,15 @@ export async function handleLoginPage(
   const orgId = url.searchParams.get("org_id") || undefined;
   const error = url.searchParams.get("error") || undefined;
 
-  if (!redirectUri || !isAllowedRedirectUri(redirectUri, env.ALLOWED_REDIRECT_ORIGINS)) {
-    return new Response("Invalid or missing redirect_uri", { status: 400 });
+  if (!redirectUri) {
+    return Response.redirect(
+      `${env.AUTH_WORKER_ORIGIN}/login?redirect_uri=${encodeURIComponent(env.AUTH_WORKER_ORIGIN + "/top")}`,
+      302,
+    );
+  }
+
+  if (!isAllowedRedirectUri(redirectUri, env.ALLOWED_REDIRECT_ORIGINS)) {
+    return new Response("Invalid redirect_uri", { status: 400 });
   }
 
   const googleEnabled = Boolean(env.GOOGLE_CLIENT_ID);

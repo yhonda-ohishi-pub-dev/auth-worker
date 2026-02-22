@@ -18,13 +18,31 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
       background: #f5f5f5;
       padding: 1rem;
     }
+    .page-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      max-width: 1300px;
+      margin: 1rem auto;
+    }
     .container {
       background: white;
       border-radius: 8px;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       padding: 2rem;
       max-width: 600px;
-      margin: 2rem auto;
+      width: 100%;
+    }
+    @media (min-width: 1200px) {
+      .page-wrapper {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+      .container {
+        flex: 1;
+        max-width: none;
+      }
     }
     h1 { font-size: 1.5rem; margin-bottom: 1.5rem; color: #333; display: flex; align-items: center; gap: 0.75rem; }
     .back-link {
@@ -118,9 +136,14 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
   </style>
 </head>
 <body>
+  <div class="page-wrapper">
   <div class="container">
     <a href="${frontendOrigins[0] || 'javascript:history.back()'}" class="back-link">\u2190 \u623b\u308b</a>
-    <h1>SSO \u30d7\u30ed\u30d0\u30a4\u30c0\u8a2d\u5b9a</h1>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h1>SSO \u30d7\u30ed\u30d0\u30a4\u30c0\u8a2d\u5b9a</h1>
+      <button class="btn btn-gray btn-sm" onclick="logout()">\u30ed\u30b0\u30a2\u30a6\u30c8</button>
+    </div>
+    <div id="user-info" style="font-size:0.8rem;color:#6b7280;margin-bottom:1rem;"></div>
     <p class="desc">
       \u5916\u90e8 SSO \u30d7\u30ed\u30d0\u30a4\u30c0\uff08LINE WORKS \u7b49\uff09\u3092\u767b\u9332\u3059\u308b\u3068\u3001\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u304b\u3089\u30d7\u30ed\u30d0\u30a4\u30c0\u7d4c\u7531\u3067\u8a8d\u8a3c\u3067\u304d\u307e\u3059\u3002<br>
       \u4e8b\u524d\u306b\u30d7\u30ed\u30d0\u30a4\u30c0\u306e Developer Console \u3067 OAuth \u30a2\u30d7\u30ea\u3092\u4f5c\u6210\u3057\u3001Redirect URI \u306b
@@ -236,6 +259,7 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
       </div>
     </form>
   </div>
+  </div>
 
   <!-- Bot delete confirmation modal -->
   <div id="bot-delete-modal" class="modal-overlay hidden">
@@ -274,7 +298,23 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
       token = match ? match[1] : null;
       if (!token) {
         window.location.replace('/admin/sso');
+        return;
       }
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const providerLabels = { google: 'Google', lineworks: 'LINE WORKS', password: 'Password' };
+        const provider = payload.provider || '';
+        const username = payload.username || '';
+        const label = providerLabels[provider] || provider || '';
+        const el = document.getElementById('user-info');
+        if (el && (username || label)) {
+          el.textContent = username + (label ? ' (via ' + label + ')' : '');
+        }
+      } catch (e) {}
+    }
+
+    function logout() {
+      window.location.replace('/logout');
     }
 
     async function api(path, body) {
@@ -288,7 +328,12 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
       });
       const data = await res.json();
       if (!res.ok || data.error) {
-        throw new Error(data.error || 'API error');
+        const msg = data.error || 'API error';
+        if (msg.includes('permission_denied') || msg.includes('Admin role required')) {
+          window.location.replace('/top');
+          return;
+        }
+        throw new Error(msg);
       }
       return data;
     }

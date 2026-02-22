@@ -27,6 +27,21 @@ export interface AuthState {
   token: string
   orgId: string
   expiresAt: number // unix timestamp (seconds)
+  username?: string   // JWT username claim (email or display name)
+  provider?: string   // 'google' | 'lineworks' | 'password'
+}
+
+/** JWT payload から username と provider を安全に取り出す */
+function decodeJwtClaims(token: string): { username?: string; provider?: string } {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return {
+      username: payload.username || undefined,
+      provider: payload.provider || undefined,
+    }
+  } catch {
+    return {}
+  }
 }
 
 function readStorage(): AuthState | null {
@@ -94,6 +109,13 @@ export const useAuth = () => {
     if (stored) {
       const now = Math.floor(Date.now() / 1000)
       if (stored.expiresAt > now) {
+        // 既存の localStorage に username/provider がない場合、JWT からバックフィル
+        if (!stored.username || !stored.provider) {
+          const { username, provider } = decodeJwtClaims(stored.token)
+          stored.username = username
+          stored.provider = provider
+          writeStorage(stored)
+        }
         authState.value = stored
       } else {
         clearStorage()
@@ -133,7 +155,8 @@ export const useAuth = () => {
       expiresAt = Math.floor(Date.now() / 1000) + 86400
     }
 
-    const state: AuthState = { token, orgId, expiresAt }
+    const { username, provider } = decodeJwtClaims(token)
+    const state: AuthState = { token, orgId, expiresAt, username, provider }
     writeStorage(state)
     authState.value = state
 
@@ -156,7 +179,13 @@ export const useAuth = () => {
       const payload = JSON.parse(atob(token.split('.')[1]))
       const now = Math.floor(Date.now() / 1000)
       if (payload.exp <= now) return false
-      const state: AuthState = { token, orgId: payload.org, expiresAt: payload.exp }
+      const state: AuthState = {
+        token,
+        orgId: payload.org,
+        expiresAt: payload.exp,
+        username: payload.username || undefined,
+        provider: payload.provider || undefined,
+      }
       authState.value = state
       localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(state))
       // lw_domain cookie → localStorage 同期
@@ -240,12 +269,27 @@ export const useAuth = () => {
 
   const token = computed(() => authState.value?.token ?? null)
   const orgId = computed(() => authState.value?.orgId ?? null)
+  const username = computed(() => authState.value?.username ?? null)
+  const provider = computed(() => authState.value?.provider ?? null)
+
+  /** プロバイダの表示名 */
+  const providerLabel = computed(() => {
+    switch (authState.value?.provider) {
+      case 'google': return 'Google'
+      case 'lineworks': return 'LINE WORKS'
+      case 'password': return 'パスワード'
+      default: return null
+    }
+  })
 
   return {
     authState,
     isAuthenticated,
     token,
     orgId,
+    username,
+    provider,
+    providerLabel,
     loadFromStorage,
     recoverFromCookie,
     consumeFragment,

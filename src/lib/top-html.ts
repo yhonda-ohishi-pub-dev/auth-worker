@@ -137,6 +137,19 @@ export function renderTopPage(apps: AppEntry[], authWorkerOrigin: string): strin
     .error-box a { color: #dc2626; }
 
     .hidden { display: none !important; }
+    .logout-btn {
+      display: block;
+      margin: 1.5rem auto 0;
+      padding: 0.5rem 1rem;
+      background: none;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      color: #9ca3af;
+      font-size: 0.75rem;
+      cursor: pointer;
+      width: auto;
+    }
+    .logout-btn:hover { background: #f9fafb; color: #6b7280; }
   </style>
 </head>
 <body>
@@ -158,6 +171,7 @@ export function renderTopPage(apps: AppEntry[], authWorkerOrigin: string): strin
     <!-- App menu (shown after auth) -->
     <div id="menu">
       <div class="app-grid" id="app-grid"></div>
+      <button class="logout-btn" onclick="window.location.replace('/logout')">Logout</button>
     </div>
   </div>
 
@@ -252,6 +266,13 @@ export function renderTopPage(apps: AppEntry[], authWorkerOrigin: string): strin
 
     async function init() {
       var params = new URLSearchParams(window.location.search);
+      var errorParam = params.get('error');
+      if (errorParam === 'no_permission') {
+        var el = document.getElementById('error');
+        el.textContent = '権限がありません';
+        el.classList.remove('hidden');
+        history.replaceState(null, '', window.location.pathname);
+      }
       var lwParam = params.get('lw');
       var isWoff = params.has('woff');
 
