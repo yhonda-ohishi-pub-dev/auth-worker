@@ -15,6 +15,16 @@ import { handleAdminRichMenuPage, handleAdminRichMenuCallback } from "./handlers
 import { handleWoffAuth, handleWoffConfig } from "./handlers/woff-auth";
 import { handleTopPage } from "./handlers/top-page";
 import { handleLogout } from "./handlers/logout";
+import { handleJoinPage } from "./handlers/join-page";
+import { handleJoinDone } from "./handlers/join-callback";
+import { handleAdminRequestsPage, handleAdminRequestsCallback } from "./handlers/admin-requests";
+import {
+  handleAccessRequestCreate, handleAccessRequestList,
+  handleAccessRequestApprove, handleAccessRequestDecline,
+} from "./handlers/api-access-requests";
+import { handleSwitchOrg } from "./handlers/api-switch-org";
+import { handleMyOrgs } from "./handlers/api-my-orgs";
+import { corsPreflight } from "./lib/errors";
 
 export interface Env {
   GRPC_PROXY: Fetcher;
@@ -45,6 +55,19 @@ export default {
 
     try {
       if (request.method === "GET") {
+        // Dynamic path: /join/:slug and /join/:slug/done
+        if (url.pathname.startsWith("/join/")) {
+          const parts = url.pathname.split("/");
+          const slug = parts[2];
+          if (parts.length === 3 && slug) {
+            return await handleJoinPage(request, env, slug);
+          }
+          if (parts.length === 4 && parts[3] === "done" && slug) {
+            return handleJoinDone(slug);
+          }
+          return errorResponse(404, "Not found");
+        }
+
         switch (url.pathname) {
           case "/login":
             return await handleLoginPage(request, env);
@@ -68,6 +91,10 @@ export default {
             return await handleAdminRichMenuPage(request, env);
           case "/admin/rich-menu/callback":
             return await handleAdminRichMenuCallback();
+          case "/admin/requests":
+            return await handleAdminRequestsPage(request, env);
+          case "/admin/requests/callback":
+            return await handleAdminRequestsCallback();
           case "/logout":
             return await handleLogout(request, env);
           default:
@@ -107,20 +134,33 @@ export default {
             return await handleRichMenuDefaultSet(request, env);
           case "/api/richmenu/default/delete":
             return await handleRichMenuDefaultDelete(request, env);
+          // Access Request API
+          case "/api/access-requests/create":
+            return await handleAccessRequestCreate(request, env);
+          case "/api/access-requests/list":
+            return await handleAccessRequestList(request, env);
+          case "/api/access-requests/approve":
+            return await handleAccessRequestApprove(request, env);
+          case "/api/access-requests/decline":
+            return await handleAccessRequestDecline(request, env);
+          // Organization API (cross-origin)
+          case "/api/switch-org":
+            return await handleSwitchOrg(request, env);
+          case "/api/my-orgs":
+            return await handleMyOrgs(request, env);
           default:
             return errorResponse(404, "Not found");
         }
       }
 
-      // CORS preflight for /auth/woff
-      if (request.method === "OPTIONS" && url.pathname === "/auth/woff") {
-        return new Response(null, {
-          headers: {
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "POST, OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
-          },
-        });
+      // CORS preflight
+      if (request.method === "OPTIONS") {
+        switch (url.pathname) {
+          case "/auth/woff":
+          case "/api/switch-org":
+          case "/api/my-orgs":
+            return corsPreflight();
+        }
       }
 
       return errorResponse(405, "Method not allowed");

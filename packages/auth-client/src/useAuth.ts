@@ -32,6 +32,13 @@ export interface AuthState {
   orgSlug?: string    // organization slug from JWT org_slug claim
 }
 
+export interface OrgInfo {
+  id: string
+  name: string
+  slug: string
+  role: string
+}
+
 /** JWT payload から username と provider を安全に取り出す */
 function decodeJwtClaims(token: string): { username?: string; provider?: string; orgSlug?: string } {
   try {
@@ -265,6 +272,69 @@ export const useAuth = () => {
     return `${authWorkerUrl}/admin/sso`
   }
 
+  // 組織一覧 + 切り替え
+  const organizations = useState<OrgInfo[]>('auth_organizations', () => [])
+  const isMultiOrg = computed(() => organizations.value.length > 1)
+
+  /** ユーザーが所属する組織一覧を取得 */
+  async function fetchOrganizations(): Promise<OrgInfo[]> {
+    if (!authState.value?.token) return []
+    try {
+      const res = await fetch(`${authWorkerUrl}/api/my-orgs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authState.value.token}`,
+        },
+      })
+      if (!res.ok) return []
+      const data = await res.json() as { organizations: OrgInfo[] }
+      organizations.value = data.organizations
+      return data.organizations
+    } catch {
+      return []
+    }
+  }
+
+  /** 別の組織に切り替え（新しい JWT を発行） */
+  async function switchOrganization(orgId: string): Promise<boolean> {
+    if (!authState.value?.token) return false
+    try {
+      const res = await fetch(`${authWorkerUrl}/api/switch-org`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${authState.value.token}`,
+        },
+        body: JSON.stringify({ organizationId: orgId }),
+      })
+      if (!res.ok) return false
+      const data = await res.json() as {
+        token: string
+        expiresAt: string
+        orgId: string
+        orgSlug: string
+      }
+
+      const expiresAt = Math.floor(new Date(data.expiresAt).getTime() / 1000)
+      const { username, provider } = decodeJwtClaims(data.token)
+
+      const newState: AuthState = {
+        token: data.token,
+        orgId: data.orgId,
+        expiresAt,
+        username,
+        provider,
+        orgSlug: data.orgSlug,
+      }
+      writeStorage(newState)
+      authState.value = newState
+      return true
+    } catch {
+      return false
+    }
+  }
+
   // ownerType: 'org' | 'personal' — AuthToolbar が org slug 表示を自動制御するために使用
   const ownerType = useState<string>('auth_owner_type', () => 'org')
 
@@ -316,5 +386,9 @@ export const useAuth = () => {
     getSettingsUrl,
     ownerType,
     setOwnerType,
+    organizations,
+    isMultiOrg,
+    fetchOrganizations,
+    switchOrganization,
   }
 }

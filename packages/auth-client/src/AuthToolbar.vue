@@ -1,8 +1,41 @@
 <template>
   <div class="flex items-center gap-1">
-    <!-- Org slug display -->
+    <!-- Org switcher (multiple orgs) -->
+    <div
+      v-if="showOrgSlug && isAuthenticated && isMultiOrg && ownerType !== 'personal'"
+      class="relative org-switcher"
+    >
+      <button
+        @click="toggleOrgMenu"
+        class="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700
+               whitespace-nowrap hover:bg-purple-200 transition-colors cursor-pointer
+               flex items-center gap-0.5"
+      >
+        {{ orgSlug }}
+        <span class="text-[10px]">&#9660;</span>
+      </button>
+      <div
+        v-if="orgMenuOpen"
+        class="absolute right-0 top-full mt-1 bg-white border rounded shadow-lg
+               z-50 min-w-[160px] py-1"
+      >
+        <button
+          v-for="org in organizations"
+          :key="org.id"
+          @click="handleSwitchOrg(org.id)"
+          class="w-full px-3 py-1.5 text-left text-sm hover:bg-gray-100
+                 flex items-center justify-between"
+          :class="{ 'font-bold bg-purple-50': org.id === orgId }"
+        >
+          {{ org.slug }}
+          <span v-if="org.id === orgId" class="text-purple-600 text-xs">&#10003;</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Org slug display (single org) -->
     <span
-      v-if="showOrgSlug && isAuthenticated && orgSlug && ownerType !== 'personal'"
+      v-else-if="showOrgSlug && isAuthenticated && orgSlug && ownerType !== 'personal'"
       class="text-xs px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 whitespace-nowrap"
     >
       {{ orgSlug }}
@@ -58,7 +91,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, resolveComponent } from 'vue'
+import { ref, computed, resolveComponent, onMounted, onUnmounted } from 'vue'
 import { useAuth } from './useAuth'
 
 const props = withDefaults(defineProps<{
@@ -79,11 +112,43 @@ const emit = defineEmits<{
   (e: 'copy-url', success: boolean): void
   (e: 'logout'): void
   (e: 'open-settings', url: string): void
+  (e: 'switch-org', orgId: string): void
 }>()
 
-const { logout, copyLwLoginUrl, getSettingsUrl, getLwDomain, isAuthenticated, username, provider, providerLabel, orgSlug, ownerType } = useAuth()
+const {
+  logout, copyLwLoginUrl, getSettingsUrl, getLwDomain,
+  isAuthenticated, username, provider, providerLabel, orgSlug, orgId, ownerType,
+  organizations, isMultiOrg, switchOrganization,
+} = useAuth()
 
 const hasLwDomain = computed(() => !!getLwDomain())
+const orgMenuOpen = ref(false)
+const switching = ref(false)
+
+function toggleOrgMenu() {
+  orgMenuOpen.value = !orgMenuOpen.value
+}
+
+function handleClickOutside(e: MouseEvent) {
+  if (!(e.target as HTMLElement).closest('.org-switcher')) {
+    orgMenuOpen.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('click', handleClickOutside))
+onUnmounted(() => document.removeEventListener('click', handleClickOutside))
+
+async function handleSwitchOrg(targetOrgId: string) {
+  orgMenuOpen.value = false
+  if (targetOrgId === orgId.value || switching.value) return
+  switching.value = true
+  emit('switch-org', targetOrgId)
+  const success = await switchOrganization(targetOrgId)
+  if (success) {
+    window.location.reload()
+  }
+  switching.value = false
+}
 
 /** メールアドレスの場合は@以前だけ表示 */
 const displayUsername = computed(() => {
