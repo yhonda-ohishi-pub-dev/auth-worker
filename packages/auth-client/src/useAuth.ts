@@ -265,6 +265,19 @@ export const useAuth = () => {
     return `${window.location.origin}/?lw=${encodeURIComponent(lwDomain)}`
   }
 
+  /** QRコード用: auth-worker OAuth エンドポイントへの直接URL */
+  function getAutoLoginUrl(): string {
+    const redirectUri = `${window.location.origin}/?lw_callback=1`
+    const lwDomain = getLwDomain()
+    if (lwDomain) {
+      return `${authWorkerUrl}/oauth/lineworks/redirect?address=${encodeURIComponent(lwDomain)}&redirect_uri=${encodeURIComponent(redirectUri)}`
+    }
+    if (authState.value?.provider === 'google') {
+      return `${authWorkerUrl}/oauth/google/redirect?redirect_uri=${encodeURIComponent(redirectUri)}`
+    }
+    return `${authWorkerUrl}/login?redirect_uri=${encodeURIComponent(redirectUri)}`
+  }
+
   /** LINE WORKS 自動ログイン URL をクリップボードにコピー */
   async function copyLwLoginUrl(): Promise<boolean> {
     const url = getLwLoginUrl()
@@ -392,6 +405,7 @@ export const useAuth = () => {
     getLwDomain,
     clearLwDomain,
     getLwLoginUrl,
+    getAutoLoginUrl,
     copyLwLoginUrl,
     getSettingsUrl,
     ownerType,
