@@ -35,7 +35,7 @@ export async function generateOAuthState(
 export async function verifyOAuthState(
   state: string,
   secret: string,
-): Promise<{ redirect_uri: string; provider?: string; external_org_id?: string } | null> {
+): Promise<{ redirect_uri: string; provider?: string; external_org_id?: string; join_org?: string } | null> {
   const dotIndex = state.indexOf(".");
   if (dotIndex === -1) return null;
 
@@ -47,7 +47,7 @@ export async function verifyOAuthState(
 
   try {
     const json = base64UrlDecode(stateB64);
-    return JSON.parse(json) as { redirect_uri: string; provider?: string; external_org_id?: string };
+    return JSON.parse(json) as { redirect_uri: string; provider?: string; external_org_id?: string; join_org?: string };
   } catch {
     return null;
   }

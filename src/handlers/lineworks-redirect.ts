@@ -49,11 +49,14 @@ export async function handleLineworksRedirect(
 
     console.log(JSON.stringify({ event: "lw_oauth_start", domain, clientId: config.clientId }));
 
-    // Generate HMAC-signed state with provider info
-    const state = await generateOAuthState(redirectUri, env.OAUTH_STATE_SECRET, {
+    // Generate HMAC-signed state with provider info (+ optional join_org)
+    const joinOrg = url.searchParams.get("join_org");
+    const extraState: Record<string, string> = {
       provider: "lineworks",
       external_org_id: domain,
-    });
+    };
+    if (joinOrg) extraState.join_org = joinOrg;
+    const state = await generateOAuthState(redirectUri, env.OAUTH_STATE_SECRET, extraState);
 
     // Build LINE WORKS authorize URL
     const authorizeUrl = new URL("https://auth.worksmobile.com/oauth2/v2.0/authorize");

@@ -32,7 +32,7 @@ export async function handleGoogleCallback(
     return new Response("Invalid state parameter", { status: 400 });
   }
 
-  const { redirect_uri: redirectUri } = stateData;
+  const { redirect_uri: redirectUri, join_org: joinOrg } = stateData;
 
   // Defense in depth: re-validate redirect_uri
   if (!isAllowedRedirectUri(redirectUri, env.ALLOWED_REDIRECT_ORIGINS)) {
@@ -72,7 +72,7 @@ export async function handleGoogleCallback(
       idToken: tokenData.id_token,
     });
 
-    // Redirect back with JWT in URL fragment
+    // Build JWT fragment
     const fragment = new URLSearchParams({
       token: response.token,
       expires_at: response.expiresAt,
@@ -89,7 +89,14 @@ export async function handleGoogleCallback(
       }
     }
 
-    // Ensure lw_callback=1 to prevent server middleware redirect loop
+    // Join flow: redirect to /join/:slug/done with JWT fragment
+    if (joinOrg) {
+      const joinDoneUrl = new URL(`${origin}/join/${joinOrg}/done`);
+      console.log(JSON.stringify({ event: "google_login_join", joinOrg }));
+      return Response.redirect(`${joinDoneUrl.toString()}#${fragment.toString()}`, 302);
+    }
+
+    // Normal flow: redirect back to original redirect_uri
     const finalUrl = new URL(redirectUri);
     if (!finalUrl.searchParams.has('lw_callback')) {
       finalUrl.searchParams.set('lw_callback', '1');

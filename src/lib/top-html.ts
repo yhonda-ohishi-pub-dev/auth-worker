@@ -106,6 +106,7 @@ export function renderTopPage(apps: AppEntry[], authWorkerOrigin: string): strin
     }
     .app-icon-carins { background: #dbeafe; color: #2563eb; }
     .app-icon-dtako { background: #fef3c7; color: #d97706; }
+    .app-icon-items { background: #f0fdf4; color: #16a34a; }
     .app-icon-default { background: #f3f4f6; color: #6b7280; }
     .app-name {
       font-size: 1rem;
@@ -240,6 +241,7 @@ export function renderTopPage(apps: AppEntry[], authWorkerOrigin: string): strin
         let iconClass = 'app-icon-default';
         if (app.url.includes('carins')) iconClass = 'app-icon-carins';
         if (app.url.includes('ohishi2')) iconClass = 'app-icon-dtako';
+        if (app.url.includes('items')) iconClass = 'app-icon-items';
         return '<a href="' + escapeHtml(app.url) + '" class="app-card">' +
           '<div class="app-icon ' + iconClass + '">' + escapeHtml(app.icon) + '</div>' +
           '<div><div class="app-name">' + escapeHtml(app.name) + '</div>' +

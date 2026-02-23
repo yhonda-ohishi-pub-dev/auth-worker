@@ -30,7 +30,7 @@ export async function handleLineworksCallback(
     return new Response("Invalid state parameter", { status: 400 });
   }
 
-  const { redirect_uri: redirectUri, provider, external_org_id: externalOrgId } = stateData;
+  const { redirect_uri: redirectUri, provider, external_org_id: externalOrgId, join_org: joinOrg } = stateData;
 
   if (!redirectUri || !isAllowedRedirectUri(redirectUri, env.ALLOWED_REDIRECT_ORIGINS)) {
     return new Response("Invalid redirect_uri in state", { status: 400 });
@@ -69,7 +69,28 @@ export async function handleLineworksCallback(
       }
     }
 
-    // Ensure lw_callback=1 to prevent server middleware redirect loop
+    // Join flow: redirect to /join/:slug/done with JWT fragment
+    if (joinOrg) {
+      const joinDoneUrl = new URL(`${origin}/join/${joinOrg}/done`);
+      // Set cookie for LINE WORKS in-app browser
+      const joinHost = joinDoneUrl.hostname;
+      const joinDomainParts = joinHost.split('.');
+      const joinParentDomain = joinDomainParts.length > 2
+        ? joinDomainParts.slice(-2).join('.')
+        : joinHost;
+      const joinCookieValue = `logi_auth_token=${response.token}; Domain=.${joinParentDomain}; Path=/; Max-Age=86400; Secure; SameSite=Lax`;
+
+      console.log(JSON.stringify({ event: "lw_login_join", joinOrg, externalOrgId }));
+      return new Response(null, {
+        status: 302,
+        headers: {
+          'Location': `${joinDoneUrl.toString()}#${fragment.toString()}`,
+          'Set-Cookie': joinCookieValue,
+        },
+      });
+    }
+
+    // Normal flow: redirect back to original redirect_uri
     const finalUrl = new URL(redirectUri);
     if (!finalUrl.searchParams.has('lw_callback')) {
       finalUrl.searchParams.set('lw_callback', '1');

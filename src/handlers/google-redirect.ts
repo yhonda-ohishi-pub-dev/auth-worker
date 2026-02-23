@@ -16,10 +16,13 @@ export async function handleGoogleRedirect(
     return new Response("Invalid or missing redirect_uri", { status: 400 });
   }
 
-  console.log(JSON.stringify({ event: "google_redirect", redirectUri }));
+  const joinOrg = url.searchParams.get("join_org");
+  console.log(JSON.stringify({ event: "google_redirect", redirectUri, joinOrg }));
 
-  // Generate HMAC-signed state with embedded redirect_uri
-  const state = await generateOAuthState(redirectUri, env.OAUTH_STATE_SECRET);
+  // Generate HMAC-signed state with embedded redirect_uri (+ optional join_org)
+  const extra: Record<string, string> = {};
+  if (joinOrg) extra.join_org = joinOrg;
+  const state = await generateOAuthState(redirectUri, env.OAUTH_STATE_SECRET, Object.keys(extra).length > 0 ? extra : undefined);
 
   // Build Google OAuth authorization URL
   const googleAuthUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");

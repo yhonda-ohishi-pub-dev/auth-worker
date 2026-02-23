@@ -146,9 +146,16 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
     <div id="user-info" style="font-size:0.8rem;color:#6b7280;margin-bottom:1rem;"></div>
     <p class="desc">
       \u5916\u90e8 SSO \u30d7\u30ed\u30d0\u30a4\u30c0\uff08LINE WORKS \u7b49\uff09\u3092\u767b\u9332\u3059\u308b\u3068\u3001\u30ed\u30b0\u30a4\u30f3\u753b\u9762\u304b\u3089\u30d7\u30ed\u30d0\u30a4\u30c0\u7d4c\u7531\u3067\u8a8d\u8a3c\u3067\u304d\u307e\u3059\u3002<br>
-      \u4e8b\u524d\u306b\u30d7\u30ed\u30d0\u30a4\u30c0\u306e Developer Console \u3067 OAuth \u30a2\u30d7\u30ea\u3092\u4f5c\u6210\u3057\u3001Redirect URI \u306b
-      <code>https://auth.mtamaramu.com/oauth/lineworks/callback</code> \u3092\u8a2d\u5b9a\u3057\u3066\u304f\u3060\u3055\u3044\u3002
+      \u4e8b\u524d\u306b\u30d7\u30ed\u30d0\u30a4\u30c0\u306e Developer Console \u3067 OAuth \u30a2\u30d7\u30ea\u3092\u4f5c\u6210\u3057\u3001Redirect URI \u3092\u8a2d\u5b9a\u3057\u3066\u304f\u3060\u3055\u3044\u3002
     </p>
+    <div class="url-list" style="margin-bottom:1rem;">
+      <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.25rem;">Redirect URI\uff08Developer Console \u306b\u8a2d\u5b9a\uff09:</div>
+      <div class="url-row"><code>https://auth.mtamaramu.com/oauth/lineworks/callback</code><button class="btn-copy" onclick="copyUrl(this, 'https://auth.mtamaramu.com/oauth/lineworks/callback')">\u30b3\u30d4\u30fc</button></div>
+    </div>
+    <div id="join-url-section" class="url-list hidden" style="margin-bottom:1rem;">
+      <div style="font-size:0.75rem;color:#6b7280;margin-bottom:0.25rem;">\u53c2\u52a0\u30ea\u30af\u30a8\u30b9\u30c8URL:</div>
+      <div id="join-url-row" class="url-row"></div>
+    </div>
 
     <div id="msg"></div>
 
@@ -310,6 +317,16 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
         if (el && (username || label)) {
           el.textContent = username + (label ? ' (via ' + label + ')' : '');
         }
+        // Show join URL from org_slug in JWT
+        if (payload.org_slug) {
+          var joinUrl = window.location.origin + '/join/' + encodeURIComponent(payload.org_slug);
+          var section = document.getElementById('join-url-section');
+          var row = document.getElementById('join-url-row');
+          if (section && row) {
+            row.innerHTML = '<code>' + escapeHtml(joinUrl) + '</code><button class="btn-copy" onclick="copyUrl(this, \\'' + escapeAttr(joinUrl) + '\\')">\u30b3\u30d4\u30fc</button>';
+            section.classList.remove('hidden');
+          }
+        }
       } catch (e) {}
     }
 
@@ -363,8 +380,27 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
       }
     }
 
+    function updateJoinUrl(configs) {
+      var section = document.getElementById('join-url-section');
+      // Skip if already shown by initAuth (from JWT org_slug)
+      if (section && !section.classList.contains('hidden')) return;
+      var row = document.getElementById('join-url-row');
+      var orgId = '';
+      for (var i = 0; i < configs.length; i++) {
+        if (configs[i].externalOrgId) { orgId = configs[i].externalOrgId; break; }
+      }
+      if (orgId) {
+        var joinUrl = window.location.origin + '/join/' + encodeURIComponent(orgId);
+        row.innerHTML = '<code>' + escapeHtml(joinUrl) + '</code><button class="btn-copy" onclick="copyUrl(this, \\'' + escapeAttr(joinUrl) + '\\')">\u30b3\u30d4\u30fc</button>';
+        section.classList.remove('hidden');
+      } else {
+        section.classList.add('hidden');
+      }
+    }
+
     function renderConfigs(configs) {
       const el = document.getElementById('config-list');
+      updateJoinUrl(configs);
       if (configs.length === 0) {
         el.innerHTML = '<div class="empty">SSO \u30d7\u30ed\u30d0\u30a4\u30c0\u304c\u672a\u8a2d\u5b9a\u3067\u3059</div>';
         return;

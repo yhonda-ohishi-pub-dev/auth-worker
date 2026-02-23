@@ -23,6 +23,14 @@ function originToApp(origin: string): AppEntry {
       description: "ドライブレコーダーログ",
     };
   }
+  if (origin.includes("nuxt-items")) {
+    return {
+      name: "物品管理",
+      url: origin,
+      icon: "箱",
+      description: "組織・個人の物品管理",
+    };
+  }
   return { name: origin, url: origin, icon: "App", description: "" };
 }
 
