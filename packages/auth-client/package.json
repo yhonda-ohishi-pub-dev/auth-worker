@@ -12,6 +12,9 @@
   "files": [
     "src"
   ],
+  "dependencies": {
+    "uqr": "^0.1.2"
+  },
   "peerDependencies": {
     "nuxt": ">=3.0.0",
     "vue": ">=3.0.0"

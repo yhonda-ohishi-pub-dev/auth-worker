@@ -71,6 +71,37 @@
     </component>
 
     <component
+      v-if="showQr && isAuthenticated"
+      :is="uButton"
+      v-bind="buttonProps"
+      @click="qrOpen = !qrOpen"
+    >
+      QR
+    </component>
+
+    <!-- QR Code popup overlay -->
+    <div
+      v-if="qrOpen"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      @click.self="qrOpen = false"
+    >
+      <div class="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full mx-4">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-sm font-medium text-gray-700">ページ共有QR</span>
+          <button
+            class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer"
+            @click="qrOpen = false"
+          >&times;</button>
+        </div>
+        <div
+          class="flex justify-center"
+          v-html="qrSvg"
+        />
+        <p class="mt-3 text-xs text-gray-500 text-center break-all">{{ qrUrl }}</p>
+      </div>
+    </div>
+
+    <component
       v-if="showSettings"
       :is="uButton"
       v-bind="buttonProps"
@@ -92,16 +123,19 @@
 
 <script setup lang="ts">
 import { ref, computed, resolveComponent, onMounted, onUnmounted } from 'vue'
+import { renderSVG } from 'uqr'
 import { useAuth } from './useAuth'
 
 const props = withDefaults(defineProps<{
   showCopyUrl?: boolean
+  showQr?: boolean
   showSettings?: boolean
   showLogout?: boolean
   showUserInfo?: boolean
   showOrgSlug?: boolean
 }>(), {
   showCopyUrl: true,
+  showQr: true,
   showSettings: true,
   showLogout: true,
   showUserInfo: true,
@@ -124,6 +158,23 @@ const {
 const hasLwDomain = computed(() => !!getLwDomain())
 const orgMenuOpen = ref(false)
 const switching = ref(false)
+const qrOpen = ref(false)
+
+const qrUrl = computed(() => {
+  if (typeof window === 'undefined') return ''
+  const lwDomain = getLwDomain()
+  if (lwDomain) {
+    const url = new URL(window.location.href)
+    url.searchParams.set('lw', lwDomain)
+    return url.toString()
+  }
+  return window.location.href
+})
+
+const qrSvg = computed(() => {
+  if (!qrUrl.value) return ''
+  return renderSVG(qrUrl.value, { border: 2, ecc: 'M', pixelSize: 8 })
+})
 
 function toggleOrgMenu() {
   orgMenuOpen.value = !orgMenuOpen.value
