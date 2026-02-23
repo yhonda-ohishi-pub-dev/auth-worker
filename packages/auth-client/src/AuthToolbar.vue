@@ -94,7 +94,7 @@
           >&times;</button>
         </div>
         <div
-          class="flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"
+          class="flex justify-center [&>svg]:w-48 [&>svg]:h-auto"
           v-html="qrSvg"
         />
         <p class="mt-3 text-xs text-gray-500 text-center break-all">{{ qrUrl }}</p>
