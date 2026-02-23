@@ -153,13 +153,14 @@ const qrOpen = ref(false)
 
 const qrUrl = computed(() => {
   if (typeof window === 'undefined') return ''
+  const url = new URL(window.location.href)
+  url.hash = ''
+  url.searchParams.delete('lw_callback')
   const lwDomain = getLwDomain()
   if (lwDomain) {
-    const url = new URL(window.location.href)
     url.searchParams.set('lw', lwDomain)
-    return url.toString()
   }
-  return window.location.href
+  return url.toString()
 })
 
 const qrSvg = computed(() => {
