@@ -80,11 +80,12 @@
       </component>
       <div
         v-if="qrOpen"
-        class="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg
-               z-50 p-4 w-72"
+        class="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg z-50 p-4"
+        style="width: 288px"
       >
         <div
-          class="flex justify-center [&>svg]:w-60 [&>svg]:h-auto"
+          class="flex justify-center"
+          style="max-width: 240px; margin: 0 auto"
           v-html="qrSvg"
         />
         <p class="mt-2 text-[10px] text-gray-400 text-center break-all leading-tight">{{ qrUrl }}</p>
@@ -163,7 +164,8 @@ const qrUrl = computed(() => {
 
 const qrSvg = computed(() => {
   if (!qrUrl.value) return ''
-  return renderSVG(qrUrl.value, { border: 2, ecc: 'M', pixelSize: 4 })
+  const svg = renderSVG(qrUrl.value, { border: 2, ecc: 'M', pixelSize: 4 })
+  return svg.replace('<svg ', '<svg style="width:100%;height:auto" ')
 })
 
 function toggleOrgMenu() {
