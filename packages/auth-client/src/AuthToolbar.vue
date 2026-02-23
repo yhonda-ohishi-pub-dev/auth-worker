@@ -159,6 +159,8 @@ const qrUrl = computed(() => {
   const lwDomain = getLwDomain()
   if (lwDomain) {
     url.searchParams.set('lw', lwDomain)
+  } else if (provider.value === 'google') {
+    url.searchParams.set('provider', 'google')
   }
   return url.toString()
 })

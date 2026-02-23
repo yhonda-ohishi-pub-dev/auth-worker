@@ -233,6 +233,15 @@ export const useAuth = () => {
       return
     }
 
+    // Google 自動ログイン（?provider=google で遷移してきた場合）
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      if (urlParams.get('provider') === 'google') {
+        window.location.href = `${authWorkerUrl}/oauth/google/redirect?redirect_uri=${encodeURIComponent(redirectUri)}`
+        return
+      }
+    }
+
     // デフォルト: 汎用ログイン画面
     window.location.href = `${authWorkerUrl}/login?redirect_uri=${encodeURIComponent(redirectUri)}`
   }
