@@ -81,10 +81,10 @@
       <div
         v-if="qrOpen"
         class="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg
-               z-50 p-3 w-52"
+               z-50 p-4 w-72"
       >
         <div
-          class="flex justify-center [&>svg]:w-44 [&>svg]:h-auto"
+          class="flex justify-center [&>svg]:w-60 [&>svg]:h-auto"
           v-html="qrSvg"
         />
         <p class="mt-2 text-[10px] text-gray-400 text-center break-all leading-tight">{{ qrUrl }}</p>
