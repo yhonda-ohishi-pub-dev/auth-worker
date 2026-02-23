@@ -70,34 +70,24 @@
       {{ copyLabel }}
     </component>
 
-    <component
-      v-if="showQr && isAuthenticated"
-      :is="uButton"
-      v-bind="buttonProps"
-      @click="qrOpen = !qrOpen"
-    >
-      QR
-    </component>
-
-    <!-- QR Code popup overlay -->
-    <div
-      v-if="qrOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      @click.self="qrOpen = false"
-    >
-      <div class="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full mx-4">
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-sm font-medium text-gray-700">ページ共有QR</span>
-          <button
-            class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer"
-            @click="qrOpen = false"
-          >&times;</button>
-        </div>
+    <div v-if="showQr && isAuthenticated" class="relative qr-popover">
+      <component
+        :is="uButton"
+        v-bind="buttonProps"
+        @click="qrOpen = !qrOpen"
+      >
+        QR
+      </component>
+      <div
+        v-if="qrOpen"
+        class="absolute right-0 top-full mt-1 bg-white border rounded-lg shadow-lg
+               z-50 p-3 w-52"
+      >
         <div
-          class="flex justify-center [&>svg]:w-48 [&>svg]:h-auto"
+          class="flex justify-center [&>svg]:w-44 [&>svg]:h-auto"
           v-html="qrSvg"
         />
-        <p class="mt-3 text-xs text-gray-500 text-center break-all">{{ qrUrl }}</p>
+        <p class="mt-2 text-[10px] text-gray-400 text-center break-all leading-tight">{{ qrUrl }}</p>
       </div>
     </div>
 
@@ -181,9 +171,9 @@ function toggleOrgMenu() {
 }
 
 function handleClickOutside(e: MouseEvent) {
-  if (!(e.target as HTMLElement).closest('.org-switcher')) {
-    orgMenuOpen.value = false
-  }
+  const target = e.target as HTMLElement
+  if (!target.closest('.org-switcher')) orgMenuOpen.value = false
+  if (!target.closest('.qr-popover')) qrOpen.value = false
 }
 
 onMounted(() => document.addEventListener('click', handleClickOutside))
