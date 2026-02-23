@@ -94,7 +94,7 @@
           >&times;</button>
         </div>
         <div
-          class="flex justify-center"
+          class="flex justify-center [&>svg]:max-w-full [&>svg]:h-auto"
           v-html="qrSvg"
         />
         <p class="mt-3 text-xs text-gray-500 text-center break-all">{{ qrUrl }}</p>
@@ -173,7 +173,7 @@ const qrUrl = computed(() => {
 
 const qrSvg = computed(() => {
   if (!qrUrl.value) return ''
-  return renderSVG(qrUrl.value, { border: 2, ecc: 'M', pixelSize: 8 })
+  return renderSVG(qrUrl.value, { border: 2, ecc: 'M', pixelSize: 4 })
 })
 
 function toggleOrgMenu() {
