@@ -222,24 +222,25 @@ export const useAuth = () => {
     }
     const redirectUri = window.location.origin + '/?lw_callback=1'
 
-    // LINE WORKS 自動ログイン（ドメイン保存済みの場合）
-    const lwDomain = getLwDomain()
-    if (lwDomain) {
-      const params = new URLSearchParams({
-        address: lwDomain,
-        redirect_uri: redirectUri,
-      })
+    // URL パラメータによる自動ログイン（QRコード等の明示的指定を優先）
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('provider') === 'google') {
+      window.location.href = `${authWorkerUrl}/oauth/google/redirect?redirect_uri=${encodeURIComponent(redirectUri)}`
+      return
+    }
+    const lwParam = urlParams.get('lw')
+    if (lwParam) {
+      const params = new URLSearchParams({ address: lwParam, redirect_uri: redirectUri })
       window.location.href = `${authWorkerUrl}/oauth/lineworks/redirect?${params.toString()}`
       return
     }
 
-    // Google 自動ログイン（?provider=google で遷移してきた場合）
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search)
-      if (urlParams.get('provider') === 'google') {
-        window.location.href = `${authWorkerUrl}/oauth/google/redirect?redirect_uri=${encodeURIComponent(redirectUri)}`
-        return
-      }
+    // localStorage 保存済みドメインによる LINE WORKS 自動ログイン
+    const lwDomain = getLwDomain()
+    if (lwDomain) {
+      const params = new URLSearchParams({ address: lwDomain, redirect_uri: redirectUri })
+      window.location.href = `${authWorkerUrl}/oauth/lineworks/redirect?${params.toString()}`
+      return
     }
 
     // デフォルト: 汎用ログイン画面
