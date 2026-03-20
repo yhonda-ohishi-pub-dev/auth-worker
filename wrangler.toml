@@ -19,6 +19,10 @@ head_sampling_rate = 1
 pattern = "auth.mtamaramu.com"
 custom_domain = true
 
+[[routes]]
+pattern = "auth.ippoan.org"
+custom_domain = true
+
 # Secrets (set via `wrangler secret put`):
 # GOOGLE_CLIENT_ID
 # GOOGLE_CLIENT_SECRET

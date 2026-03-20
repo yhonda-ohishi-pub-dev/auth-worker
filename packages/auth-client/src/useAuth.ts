@@ -314,7 +314,7 @@ export const useAuth = () => {
 
   /** auth-worker の設定ページ URL を取得 */
   function getSettingsUrl(): string {
-    return `${authWorkerUrl}/admin/sso` // TODO: auth-worker 廃止後に削除
+    return `https://auth.ippoan.org/admin/sso`
   }
 
   // 組織一覧 + 切り替え
