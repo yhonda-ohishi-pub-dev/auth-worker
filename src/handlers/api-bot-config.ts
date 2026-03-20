@@ -1,12 +1,9 @@
 /**
  * Bot Config API endpoints
- * Client JS → auth-worker API → gRPC BotConfigService (via cf-grpc-proxy)
+ * Client JS → auth-worker API → rust-alc-api REST API
  */
 
-import { createClient, ConnectError } from "@connectrpc/connect";
-import { BotConfigService } from "@yhonda-ohishi-pub-dev/logi-proto";
 import type { Env } from "../index";
-import { createTransportWithAuth } from "../lib/transport";
 
 function jsonResponse(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -32,32 +29,42 @@ export async function handleBotConfigList(
 
   console.log(JSON.stringify({ event: "bot_config_list" }));
 
-  const transport = createTransportWithAuth(env.GRPC_PROXY, token);
-  const client = createClient(BotConfigService, transport);
+  const resp = await fetch(`${env.ALC_API_ORIGIN}/api/admin/bot/configs`, {
+    headers: { "Authorization": `Bearer ${token}` },
+  });
 
-  try {
-    const response = await client.listConfigs({});
-    return jsonResponse({
-      configs: (response.configs || []).map((c) => ({
-        id: c.id,
-        provider: c.provider,
-        name: c.name,
-        clientId: c.clientId,
-        hasClientSecret: c.hasClientSecret,
-        serviceAccount: c.serviceAccount,
-        hasPrivateKey: c.hasPrivateKey,
-        botId: c.botId,
-        enabled: c.enabled,
-        createdAt: c.createdAt,
-        updatedAt: c.updatedAt,
-      })),
-    });
-  } catch (err) {
-    if (err instanceof ConnectError) {
-      return jsonResponse({ error: err.message }, 400);
-    }
-    throw err;
+  if (!resp.ok) {
+    const text = await resp.text();
+    return jsonResponse({ error: text || "Failed to list configs" }, resp.status);
   }
+
+  const data = await resp.json() as { configs: Array<{
+    id: string;
+    provider: string;
+    name: string;
+    client_id: string;
+    service_account: string;
+    bot_id: string;
+    enabled: boolean;
+    created_at: string;
+    updated_at: string;
+  }> };
+
+  return jsonResponse({
+    configs: (data.configs || []).map((c) => ({
+      id: c.id,
+      provider: c.provider,
+      name: c.name,
+      clientId: c.client_id,
+      hasClientSecret: true,
+      serviceAccount: c.service_account,
+      hasPrivateKey: true,
+      botId: c.bot_id,
+      enabled: c.enabled,
+      createdAt: c.created_at,
+      updatedAt: c.updated_at,
+    })),
+  });
 }
 
 export async function handleBotConfigUpsert(
@@ -86,46 +93,53 @@ export async function handleBotConfigUpsert(
     );
   }
 
-  console.log(
-    JSON.stringify({
-      event: "bot_config_upsert",
-      name: body.name,
-      botId: body.botId,
-    }),
-  );
+  console.log(JSON.stringify({ event: "bot_config_upsert", name: body.name, botId: body.botId }));
 
-  const transport = createTransportWithAuth(env.GRPC_PROXY, token);
-  const client = createClient(BotConfigService, transport);
-
-  try {
-    const response = await client.upsertConfig({
-      id: body.id || "",
+  const resp = await fetch(`${env.ALC_API_ORIGIN}/api/admin/bot/configs`, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      id: body.id || null,
       provider: body.provider || "lineworks",
       name: body.name,
-      clientId: body.clientId,
-      clientSecret: body.clientSecret || "",
-      serviceAccount: body.serviceAccount,
-      privateKey: body.privateKey || "",
-      botId: body.botId,
+      client_id: body.clientId,
+      client_secret: body.clientSecret || null,
+      service_account: body.serviceAccount,
+      private_key: body.privateKey || null,
+      bot_id: body.botId,
       enabled: body.enabled ?? true,
-    });
-    return jsonResponse({
-      id: response.id,
-      provider: response.provider,
-      name: response.name,
-      clientId: response.clientId,
-      hasClientSecret: response.hasClientSecret,
-      serviceAccount: response.serviceAccount,
-      hasPrivateKey: response.hasPrivateKey,
-      botId: response.botId,
-      enabled: response.enabled,
-    });
-  } catch (err) {
-    if (err instanceof ConnectError) {
-      return jsonResponse({ error: err.message }, 400);
-    }
-    throw err;
+    }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    return jsonResponse({ error: text || "Failed to upsert config" }, resp.status);
   }
+
+  const c = await resp.json() as {
+    id: string;
+    provider: string;
+    name: string;
+    client_id: string;
+    service_account: string;
+    bot_id: string;
+    enabled: boolean;
+  };
+
+  return jsonResponse({
+    id: c.id,
+    provider: c.provider,
+    name: c.name,
+    clientId: c.client_id,
+    hasClientSecret: true,
+    serviceAccount: c.service_account,
+    hasPrivateKey: true,
+    botId: c.bot_id,
+    enabled: c.enabled,
+  });
 }
 
 export async function handleBotConfigDelete(
@@ -142,16 +156,19 @@ export async function handleBotConfigDelete(
 
   console.log(JSON.stringify({ event: "bot_config_delete", id: body.id }));
 
-  const transport = createTransportWithAuth(env.GRPC_PROXY, token);
-  const client = createClient(BotConfigService, transport);
+  const resp = await fetch(`${env.ALC_API_ORIGIN}/api/admin/bot/configs`, {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ id: body.id }),
+  });
 
-  try {
-    await client.deleteConfig({ id: body.id });
-    return jsonResponse({ success: true });
-  } catch (err) {
-    if (err instanceof ConnectError) {
-      return jsonResponse({ error: err.message }, 400);
-    }
-    throw err;
+  if (!resp.ok) {
+    const text = await resp.text();
+    return jsonResponse({ error: text || "Failed to delete config" }, resp.status);
   }
+
+  return jsonResponse({ success: true });
 }
