@@ -44,7 +44,7 @@ function decodeJwtClaims(token: string): { username?: string; provider?: string;
   try {
     const payload = JSON.parse(atob(token.split('.')[1]))
     return {
-      username: payload.username || undefined,
+      username: payload.username || payload.email || undefined,
       provider: payload.provider || undefined,
       orgSlug: payload.org_slug || undefined,
     }
