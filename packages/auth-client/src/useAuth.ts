@@ -265,12 +265,12 @@ export const useAuth = () => {
     window.location.href = `${authWorkerUrl}/api/auth/google/redirect?redirect_uri=${encodeURIComponent(redirectUri)}`
   }
 
-  /** ログアウト: ストレージ/cookie クリア → ログイン画面 */
+  /** ログアウト: ストレージ/cookie クリア → トップページに遷移 */
   function logout(): void {
     clearStorage()
     clearLwDomain()
     authState.value = null
-    window.location.reload()
+    window.location.href = window.location.origin + '/'
   }
 
   /** LINE WORKS 自動ログイン URL を生成 */
