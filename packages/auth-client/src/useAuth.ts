@@ -264,7 +264,7 @@ export const useAuth = () => {
     clearStorage()
     clearLwDomain()
     authState.value = null
-    // ログアウト後はページリロード（ログインページは不要、redirectToLogin が処理）
+    window.location.reload()
   }
 
   /** LINE WORKS 自動ログイン URL を生成 */
