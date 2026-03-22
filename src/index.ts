@@ -24,6 +24,11 @@ import {
 } from "./handlers/api-access-requests";
 import { handleSwitchOrg } from "./handlers/api-switch-org";
 import { handleMyOrgs } from "./handlers/api-my-orgs";
+import { handleAdminUsersPage, handleAdminUsersCallback } from "./handlers/admin-users";
+import {
+  handleUsersList, handleInvitationsList, handleInviteUser,
+  handleDeleteInvitation, handleDeleteUser,
+} from "./handlers/api-users";
 import { corsPreflight } from "./lib/errors";
 
 export interface Env {
@@ -96,6 +101,10 @@ export default {
             return await handleAdminRequestsPage(request, env);
           case "/admin/requests/callback":
             return await handleAdminRequestsCallback();
+          case "/admin/users":
+            return await handleAdminUsersPage(request, env);
+          case "/admin/users/callback":
+            return await handleAdminUsersCallback();
           case "/logout":
             return await handleLogout(request, env);
           default:
@@ -144,6 +153,17 @@ export default {
             return await handleAccessRequestApprove(request, env);
           case "/api/access-requests/decline":
             return await handleAccessRequestDecline(request, env);
+          // User Management API
+          case "/api/users/list":
+            return await handleUsersList(request, env);
+          case "/api/users/invitations":
+            return await handleInvitationsList(request, env);
+          case "/api/users/invite":
+            return await handleInviteUser(request, env);
+          case "/api/users/invite/delete":
+            return await handleDeleteInvitation(request, env);
+          case "/api/users/delete":
+            return await handleDeleteUser(request, env);
           // Organization API (cross-origin)
           case "/api/switch-org":
             return await handleSwitchOrg(request, env);

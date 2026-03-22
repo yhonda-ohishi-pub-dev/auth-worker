@@ -209,9 +209,9 @@ export const useAuth = () => {
       if (payload.exp <= now) return false
       const state: AuthState = {
         token,
-        orgId: payload.org,
+        orgId: payload.tenant_id || payload.org,
         expiresAt: payload.exp,
-        username: payload.username || undefined,
+        username: payload.username || payload.email || payload.name || undefined,
         provider: payload.provider || undefined,
         orgSlug: payload.org_slug || undefined,
       }
