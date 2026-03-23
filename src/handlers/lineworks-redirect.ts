@@ -1,8 +1,8 @@
-import { createClient, ConnectError } from "@connectrpc/connect";
-import { AuthService } from "@yhonda-ohishi-pub-dev/logi-proto";
+/**
+ * LINE WORKS OAuth redirect — proxy to rust-alc-api
+ */
 import type { Env } from "../index";
-import { createTransport } from "../lib/transport";
-import { isAllowedRedirectUri, generateOAuthState } from "../lib/security";
+import { isAllowedRedirectUri } from "../lib/security";
 
 export async function handleLineworksRedirect(
   request: Request,
@@ -28,57 +28,16 @@ export async function handleLineworksRedirect(
 
   console.log(JSON.stringify({ event: "lw_redirect", domain, redirectUri }));
 
-  // Resolve SSO provider config from rust-logi
-  const transport = createTransport(env.GRPC_PROXY);
-  const client = createClient(AuthService, transport);
+  // Proxy to rust-alc-api lineworks redirect endpoint
+  const alcUrl = new URL(`${env.ALC_API_ORIGIN}/api/auth/lineworks/redirect`);
+  alcUrl.searchParams.set("domain", domain);
+  alcUrl.searchParams.set("redirect_uri", redirectUri);
 
-  try {
-    const config = await client.resolveSsoProvider({
-      provider: "lineworks",
-      externalOrgId: domain,
-    });
+  const resp = await fetch(alcUrl.toString(), { redirect: "manual" });
 
-    if (!config.available) {
-      console.log(JSON.stringify({ event: "lw_not_configured", domain }));
-      const params = new URLSearchParams({
-        redirect_uri: redirectUri,
-        error: `LINE WORKS login is not configured for "${domain}"`,
-      });
-      return Response.redirect(`${url.origin}/login?${params.toString()}`, 302);
-    }
-
-    console.log(JSON.stringify({ event: "lw_oauth_start", domain, clientId: config.clientId }));
-
-    // Generate HMAC-signed state with provider info (+ optional join_org)
-    const joinOrg = url.searchParams.get("join_org");
-    const extraState: Record<string, string> = {
-      provider: "lineworks",
-      external_org_id: domain,
-    };
-    if (joinOrg) extraState.join_org = joinOrg;
-    const state = await generateOAuthState(redirectUri, env.OAUTH_STATE_SECRET, extraState);
-
-    // Build LINE WORKS authorize URL
-    const authorizeUrl = new URL("https://auth.worksmobile.com/oauth2/v2.0/authorize");
-    authorizeUrl.searchParams.set("client_id", config.clientId);
-    authorizeUrl.searchParams.set(
-      "redirect_uri",
-      `${env.AUTH_WORKER_ORIGIN}/oauth/lineworks/callback`,
-    );
-    authorizeUrl.searchParams.set("response_type", "code");
-    authorizeUrl.searchParams.set("scope", "user.profile.read");
-    authorizeUrl.searchParams.set("state", state);
-
-    return Response.redirect(authorizeUrl.toString(), 302);
-  } catch (err) {
-    if (err instanceof ConnectError) {
-      console.log(JSON.stringify({ event: "lw_redirect_error", domain, error: err.message }));
-      const params = new URLSearchParams({
-        redirect_uri: redirectUri,
-        error: err.message,
-      });
-      return Response.redirect(`${url.origin}/login?${params.toString()}`, 302);
-    }
-    throw err;
-  }
+  // Pass through the redirect response (307 + Location header)
+  return new Response(resp.body, {
+    status: resp.status,
+    headers: resp.headers,
+  });
 }
