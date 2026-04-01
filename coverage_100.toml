@@ -59,3 +59,21 @@ branches = true
 [[files]]
 path = "src/handlers/lineworks-callback.ts"
 branches = true
+
+# --- Phase 4: REST API proxy ---
+
+[[files]]
+path = "src/handlers/api-sso.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/api-bot-config.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/api-users.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/api-rich-menu.ts"
+# branches = false: L218 imageFile.name fallback unreachable in Node test env
