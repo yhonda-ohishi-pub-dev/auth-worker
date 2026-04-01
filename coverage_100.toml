@@ -23,3 +23,23 @@ branches = true
 [[files]]
 path = "src/handlers/logout.ts"
 branches = true
+
+[[files]]
+path = "src/handlers/login-api.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/woff-auth.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/api-switch-org.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/api-my-orgs.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/api-access-requests.ts"
+branches = true
