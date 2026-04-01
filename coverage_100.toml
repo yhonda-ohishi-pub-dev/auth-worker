@@ -77,3 +77,69 @@ branches = true
 [[files]]
 path = "src/handlers/api-rich-menu.ts"
 # branches = false: L218 imageFile.name fallback unreachable in Node test env
+
+# --- Phase 5: Admin + HTML + transport ---
+
+[[files]]
+path = "src/lib/transport.ts"
+branches = true
+
+[[files]]
+path = "src/lib/html.ts"
+branches = true
+
+[[files]]
+path = "src/lib/join-html.ts"
+branches = true
+
+[[files]]
+path = "src/lib/top-html.ts"
+branches = true
+
+[[files]]
+path = "src/lib/admin-html.ts"
+branches = true
+
+[[files]]
+path = "src/lib/admin-requests-html.ts"
+branches = true
+
+[[files]]
+path = "src/lib/admin-rich-menu-html.ts"
+branches = true
+
+[[files]]
+path = "src/lib/admin-users-html.ts"
+branches = true
+
+[[files]]
+path = "src/lib/lineworks-bot-api.ts"
+# branches = false: L125 botFetch path.startsWith("http") else branch
+
+[[files]]
+path = "src/handlers/login-page.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/top-page.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/join-page.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/admin-sso.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/admin-rich-menu.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/admin-requests.ts"
+branches = true
+
+[[files]]
+path = "src/handlers/admin-users.ts"
+branches = true
