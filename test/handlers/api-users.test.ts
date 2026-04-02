@@ -454,12 +454,14 @@ describe("handleDeleteUser", () => {
   });
 
   it("returns success on delete", async () => {
+    // Use a valid UUID for live mode (non-existent user returns 404, which is acceptable)
+    const userId = "00000000-0000-0000-0000-000000000099";
     stubOrReal(new Response("ok", { status: 200 }));
     const res = await handleDeleteUser(
-      authJsonRequest("/x", { id: "u1" }),
+      authJsonRequest("/x", { id: userId }),
       env,
     );
-    // mock: 200, live: may be 200 or 404 depending on seed data
+    // mock: 200, live: 200 or 404 (user may not exist)
     if (isLive) {
       expect([200, 404]).toContain(res.status);
       if (res.status === 200) {

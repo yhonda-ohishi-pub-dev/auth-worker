@@ -312,6 +312,7 @@ describe("handleSsoUpsert", () => {
   });
 
   it("sends null for optional fields when not provided", async () => {
+    // clientSecret is required by backend, so we must provide it for live mode
     const mockFetchFn = vi
       .fn()
       .mockResolvedValueOnce(
@@ -332,6 +333,7 @@ describe("handleSsoUpsert", () => {
       authJsonRequest("/x", {
         provider: "lineworks",
         clientId: "defaults-cid",
+        clientSecret: "defaults-secret",
         externalOrgId: "defaults-org",
       }),
       env,
@@ -348,7 +350,6 @@ describe("handleSsoUpsert", () => {
       const sentBody = JSON.parse(
         mockFetchFn.mock.calls[0][1].body as string,
       );
-      expect(sentBody.client_secret).toBeNull();
       expect(sentBody.woff_id).toBeNull();
       expect(sentBody.enabled).toBe(true);
     }
