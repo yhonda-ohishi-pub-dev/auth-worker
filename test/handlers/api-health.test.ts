@@ -20,8 +20,9 @@ describe("handleHealthProxy", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
-    const body = await res.json() as { status: string };
+    const body = await res.json() as { status: string; auth_worker_version: string };
     expect(body.status).toBe("ok");
+    expect(body.auth_worker_version).toBeTruthy();
   });
 
   it("passes through backend error status", async () => {
