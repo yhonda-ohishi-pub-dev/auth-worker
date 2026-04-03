@@ -107,6 +107,13 @@ export default {
             return await handleAdminUsersCallback();
           case "/logout":
             return await handleLogout(request, env);
+          case "/api/health": {
+            const res = await fetch(`${env.ALC_API_ORIGIN}/api/health`);
+            return new Response(res.body, {
+              status: res.status,
+              headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+            });
+          }
           default:
             return errorResponse(404, "Not found");
         }
