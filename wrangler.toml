@@ -16,10 +16,13 @@ ALC_API_ORIGIN = "https://alc-api.ippoan.org"
 enabled = true
 head_sampling_rate = 1
 
-# Custom domains are configured in Cloudflare dashboard (not in wrangler.toml)
-# to avoid requiring Zone:Workers Routes:Edit permission in CI.
-# - auth.mtamaramu.com
-# - auth.ippoan.org
+[[routes]]
+pattern = "auth.mtamaramu.com"
+custom_domain = true
+
+[[routes]]
+pattern = "auth.ippoan.org"
+custom_domain = true
 
 # Secrets (set via `wrangler secret put`):
 # GOOGLE_CLIENT_ID
