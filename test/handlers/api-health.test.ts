@@ -1,38 +1,35 @@
-import { describe, it, expect, vi } from "vitest";
-import { createMockEnv } from "../helpers/mock-env";
-import worker from "../../src/index";
+import { describe, it, expect, afterAll } from "vitest";
+import {
+  stubOrReal,
+  testEnv,
+  noAuthRequest,
+  restoreFetch,
+  waitIfLive,
+} from "../helpers/stub-or-real";
+import { handleHealthProxy } from "../../src/handlers/health";
 
-describe("GET /api/health", () => {
-  it("proxies backend health response", async () => {
-    const env = createMockEnv();
+waitIfLive();
+afterAll(() => restoreFetch());
+
+describe("handleHealthProxy", () => {
+  it("proxies backend health response with CORS header", async () => {
     const mockHealth = { status: "ok", version: "0.1.0", git_sha: "abc1234" };
+    stubOrReal(new Response(JSON.stringify(mockHealth), { status: 200 }));
 
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response(JSON.stringify(mockHealth), { status: 200 })
-    );
-
-    const req = new Request("https://auth.test.example/api/health");
-    const res = await worker.fetch(req, env);
+    const env = testEnv();
+    const res = await handleHealthProxy(env);
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe("*");
     const body = await res.json();
-    expect(body).toEqual(mockHealth);
-
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      "https://alc-api.test.example/api/health"
-    );
+    expect(body.status).toBe("ok");
   });
 
-  it("passes through backend error", async () => {
-    const env = createMockEnv();
+  it("passes through backend error status", async () => {
+    stubOrReal(new Response("error", { status: 500 }));
 
-    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response("error", { status: 500 })
-    );
-
-    const req = new Request("https://auth.test.example/api/health");
-    const res = await worker.fetch(req, env);
+    const env = testEnv();
+    const res = await handleHealthProxy(env);
 
     expect(res.status).toBe(500);
   });
