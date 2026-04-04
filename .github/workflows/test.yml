@@ -21,7 +21,6 @@ jobs:
       post_install_script: |
         npx wrangler types
         bash scripts/export-ts-bindings.sh src/types
-      deploy_on_tag: true
       deploy_staging_script: 'npx wrangler deploy --env staging --var VERSION:${{ github.sha }}'
       deploy_release_script: 'npx wrangler deploy --var VERSION:${{ github.ref_name }}'
       npm_scope: '@ippoan'
