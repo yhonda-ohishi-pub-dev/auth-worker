@@ -8,6 +8,7 @@ describe("renderLoginPage", () => {
       googleEnabled: true,
       googleRedirectUrl: "https://api.example.com/auth/google/redirect",
       lineworksRedirectUrl: "https://api.example.com/auth/lineworks/redirect",
+      lineLoginRedirectUrl: "https://api.example.com/auth/line/redirect",
     });
     expect(typeof result).toBe("string");
   });
@@ -18,6 +19,7 @@ describe("renderLoginPage", () => {
       googleEnabled: true,
       googleRedirectUrl: "https://api.example.com/auth/google/redirect",
       lineworksRedirectUrl: "https://api.example.com/auth/lineworks/redirect",
+      lineLoginRedirectUrl: "https://api.example.com/auth/line/redirect",
     });
     expect(result).toContain("<!DOCTYPE html>");
   });
@@ -28,6 +30,7 @@ describe("renderLoginPage", () => {
       googleEnabled: true,
       googleRedirectUrl: "https://api.example.com/auth/google/redirect",
       lineworksRedirectUrl: "https://api.example.com/auth/lineworks/redirect",
+      lineLoginRedirectUrl: "https://api.example.com/auth/line/redirect",
     });
     expect(result).toContain("google");
   });
@@ -38,6 +41,7 @@ describe("renderLoginPage", () => {
       googleEnabled: false,
       googleRedirectUrl: "",
       lineworksRedirectUrl: "https://api.example.com/auth/lineworks/redirect",
+      lineLoginRedirectUrl: "https://api.example.com/auth/line/redirect",
     });
     // The <a> tag with google-btn class should not be present, but CSS may still reference it
     expect(result).not.toContain('href="https://api.example.com/auth/google');
@@ -50,6 +54,7 @@ describe("renderLoginPage", () => {
       googleEnabled: true,
       googleRedirectUrl: "https://api.example.com/auth/google/redirect",
       lineworksRedirectUrl: "https://api.example.com/auth/lineworks/redirect",
+      lineLoginRedirectUrl: "https://api.example.com/auth/line/redirect",
     });
     expect(result).toContain("invalid_token");
   });
@@ -61,6 +66,7 @@ describe("renderLoginPage", () => {
       googleEnabled: true,
       googleRedirectUrl: "https://api.example.com/auth/google/redirect",
       lineworksRedirectUrl: "https://api.example.com/auth/lineworks/redirect",
+      lineLoginRedirectUrl: "https://api.example.com/auth/line/redirect",
     });
     expect(result).toContain("&lt;script&gt;");
     expect(result).not.toContain('<script>alert("xss")</script>');
@@ -73,6 +79,7 @@ describe("renderLoginPage", () => {
       googleEnabled: true,
       googleRedirectUrl: "https://api.example.com/auth/google/redirect",
       lineworksRedirectUrl: "https://api.example.com/auth/lineworks/redirect",
+      lineLoginRedirectUrl: "https://api.example.com/auth/line/redirect",
     });
     expect(result).toContain("a&amp;b&lt;c&gt;d");
   });
@@ -84,6 +91,7 @@ describe("renderLoginPage", () => {
       googleEnabled: true,
       googleRedirectUrl: "https://api.example.com/auth/google/redirect",
       lineworksRedirectUrl: "https://api.example.com/auth/lineworks/redirect",
+      lineLoginRedirectUrl: "https://api.example.com/auth/line/redirect",
     });
     expect(result).toContain("test-org-id");
   });

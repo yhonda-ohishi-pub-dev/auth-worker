@@ -9,10 +9,11 @@ interface LoginPageParams {
   googleEnabled: boolean;
   googleRedirectUrl: string;
   lineworksRedirectUrl: string;
+  lineLoginRedirectUrl: string;
 }
 
 export function renderLoginPage(params: LoginPageParams): string {
-  const { redirectUri, orgId, error, googleEnabled, googleRedirectUrl, lineworksRedirectUrl } =
+  const { redirectUri, orgId, error, googleEnabled, googleRedirectUrl, lineworksRedirectUrl, lineLoginRedirectUrl } =
     params;
 
   const errorHtml = error
@@ -128,6 +129,24 @@ export function renderLoginPage(params: LoginPageParams): string {
       transition: background 0.2s;
     }
     .google-btn:hover { background: #f9fafb; }
+    .line-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.75rem;
+      background: #06C755;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      color: white;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-weight: 500;
+    }
+    .line-btn:hover { background: #05a847; }
     .lw-form { display: flex; gap: 0.5rem; }
     .lw-form input { margin-bottom: 0; flex: 1; }
     .lw-form button {
@@ -178,6 +197,11 @@ export function renderLoginPage(params: LoginPageParams): string {
     <h1>Logi Login</h1>
     ${errorHtml}
     ${googleButtonHtml}
+    <a href="${escapeHtml(lineLoginRedirectUrl)}" class="line-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="white"><path d="M24 10.304c0-5.369-5.383-9.738-12-9.738-6.616 0-12 4.369-12 9.738 0 4.814 4.269 8.846 10.036 9.608.391.084.922.258 1.057.592.121.303.079.778.039 1.085l-.171 1.027c-.053.303-.242 1.186 1.039.647 1.281-.54 6.911-4.069 9.428-6.967C23.023 14.581 24 12.574 24 10.304z"/></svg>
+      LINE でログイン
+    </a>
+    <div class="divider"><span>or</span></div>
     <label for="lw_address">LINE WORKS</label>
     <form class="lw-form" action="${escapeHtml(lineworksRedirectUrl)}" method="GET">
       <input type="hidden" name="redirect_uri" value="${escapeHtml(redirectUri)}">
