@@ -27,6 +27,7 @@ export async function handleLoginPage(
   const googleRedirectUrl = googleEnabled
     ? `${alcApiOrigin}/api/auth/google/redirect?redirect_uri=${encodeURIComponent(redirectUri)}`
     : "";
+  const lineLoginRedirectUrl = `${alcApiOrigin}/api/auth/line/redirect?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
   console.log(JSON.stringify({ event: "login_page", redirectUri, orgId, error }));
 
@@ -37,6 +38,7 @@ export async function handleLoginPage(
     googleEnabled,
     googleRedirectUrl,
     lineworksRedirectUrl: `${alcApiOrigin}/api/auth/lineworks/redirect`,
+    lineLoginRedirectUrl,
   });
 
   return new Response(html, {
