@@ -268,6 +268,18 @@ export function renderTopPage(apps: AppEntry[], authWorkerOrigin: string): strin
     }
 
     async function init() {
+      // 0. Check URL fragment for token (from OAuth callback redirect)
+      var hash = window.location.hash;
+      if (hash && hash.includes('token=')) {
+        var hashParams = new URLSearchParams(hash.slice(1));
+        var fragmentToken = hashParams.get('token');
+        if (fragmentToken) {
+          sessionStorage.setItem('auth_token', fragmentToken);
+          // Clean fragment from URL
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+      }
+
       var params = new URLSearchParams(window.location.search);
       var errorParam = params.get('error');
       if (errorParam === 'no_permission') {
