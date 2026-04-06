@@ -275,6 +275,15 @@ export function renderTopPage(apps: AppEntry[], authWorkerOrigin: string): strin
         var fragmentToken = hashParams.get('token');
         if (fragmentToken) {
           sessionStorage.setItem('auth_token', fragmentToken);
+          // Also save to localStorage for cross-tab persistence
+          try {
+            var payload = JSON.parse(atob(fragmentToken.split('.')[1]));
+            localStorage.setItem(AUTH_STORAGE, JSON.stringify({
+              token: fragmentToken,
+              orgId: payload.tenant_id || payload.org || '',
+              expiresAt: payload.exp
+            }));
+          } catch (e) {}
           // Clean fragment from URL
           history.replaceState(null, '', window.location.pathname + window.location.search);
         }
