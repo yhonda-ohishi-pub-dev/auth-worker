@@ -56,16 +56,12 @@ export async function handleGoogleCallback(
   if (!tokenResponse.ok) {
     const errorText = await tokenResponse.text();
     console.error("Google token exchange failed:", errorText);
-    return new Response(JSON.stringify({ step: "token_exchange", status: tokenResponse.status, error: errorText }), {
-      status: 500, headers: { "Content-Type": "application/json" },
-    });
+    return redirectToLogin(origin, redirectUri, "Google authentication failed");
   }
 
   const tokenData = (await tokenResponse.json()) as { id_token?: string };
   if (!tokenData.id_token) {
-    return new Response(JSON.stringify({ step: "id_token_missing", keys: Object.keys(tokenData) }), {
-      status: 500, headers: { "Content-Type": "application/json" },
-    });
+    return redirectToLogin(origin, redirectUri, "No ID token returned from Google");
   }
 
   // Call rust-alc-api to authenticate with Google ID token
@@ -78,9 +74,7 @@ export async function handleGoogleCallback(
   if (!authResp.ok) {
     const errorText = await authResp.text();
     console.log(JSON.stringify({ event: "google_login_failure", error: errorText }));
-    return new Response(JSON.stringify({ step: "alc_api_auth", status: authResp.status, error: errorText, url: `${env.ALC_API_ORIGIN}/api/auth/google` }), {
-      status: 500, headers: { "Content-Type": "application/json" },
-    });
+    return redirectToLogin(origin, redirectUri, errorText);
   }
 
   const authData = (await authResp.json()) as {
@@ -109,16 +103,22 @@ export async function handleGoogleCallback(
     }
   }
 
-  // Helper: extract parent domain for shared cookie
-  function getParentDomain(hostname: string): string {
+  // Helper: build cookie Domain attribute
+  // workers.dev is a Public Suffix — browser rejects Domain=.workers.dev
+  // For *.workers.dev, omit Domain (same-host only). For custom domains, use parent domain.
+  function cookieDomainAttr(hostname: string): string {
+    if (hostname.endsWith(".workers.dev")) {
+      return ""; // no Domain attr = same-host cookie
+    }
     const parts = hostname.split(".");
-    return parts.length > 2 ? parts.slice(-2).join(".") : hostname;
+    const parent = parts.length > 2 ? parts.slice(-2).join(".") : hostname;
+    return `; Domain=.${parent}`;
   }
 
   // Join flow: redirect to /join/:slug/done with JWT fragment
   if (joinOrg) {
     const joinDoneUrl = new URL(`${origin}/join/${joinOrg}/done`);
-    const joinCookie = `logi_auth_token=${token}; Domain=.${getParentDomain(joinDoneUrl.hostname)}; Path=/; Max-Age=86400; Secure; SameSite=Lax`;
+    const joinCookie = `logi_auth_token=${token}${cookieDomainAttr(joinDoneUrl.hostname)}; Path=/; Max-Age=86400; Secure; SameSite=Lax`;
     console.log(JSON.stringify({ event: "google_login_join", joinOrg }));
     return new Response(null, {
       status: 302,
@@ -136,7 +136,7 @@ export async function handleGoogleCallback(
   }
 
   // JWT を cookie でもセット（親ドメイン共有で auth-worker admin 等が読める）
-  const cookieValue = `logi_auth_token=${token}; Domain=.${getParentDomain(finalUrl.hostname)}; Path=/; Max-Age=86400; Secure; SameSite=Lax`;
+  const cookieValue = `logi_auth_token=${token}${cookieDomainAttr(finalUrl.hostname)}; Path=/; Max-Age=86400; Secure; SameSite=Lax`;
   console.log(JSON.stringify({ event: "google_login_success", redirectUri }));
   return new Response(null, {
     status: 302,
