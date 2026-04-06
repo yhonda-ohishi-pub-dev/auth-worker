@@ -56,12 +56,16 @@ export async function handleGoogleCallback(
   if (!tokenResponse.ok) {
     const errorText = await tokenResponse.text();
     console.error("Google token exchange failed:", errorText);
-    return redirectToLogin(origin, redirectUri, "Google authentication failed");
+    return new Response(JSON.stringify({ step: "token_exchange", status: tokenResponse.status, error: errorText }), {
+      status: 500, headers: { "Content-Type": "application/json" },
+    });
   }
 
   const tokenData = (await tokenResponse.json()) as { id_token?: string };
   if (!tokenData.id_token) {
-    return redirectToLogin(origin, redirectUri, "No ID token returned from Google");
+    return new Response(JSON.stringify({ step: "id_token_missing", tokenData }), {
+      status: 500, headers: { "Content-Type": "application/json" },
+    });
   }
 
   // Call rust-alc-api to authenticate with Google ID token
@@ -74,7 +78,9 @@ export async function handleGoogleCallback(
   if (!authResp.ok) {
     const errorText = await authResp.text();
     console.log(JSON.stringify({ event: "google_login_failure", error: errorText }));
-    return redirectToLogin(origin, redirectUri, errorText);
+    return new Response(JSON.stringify({ step: "alc_api_auth", status: authResp.status, error: errorText }), {
+      status: 500, headers: { "Content-Type": "application/json" },
+    });
   }
 
   const authData = (await authResp.json()) as {
