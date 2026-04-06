@@ -85,15 +85,17 @@ export async function handleLineworksCallback(
       }
     }
 
-    function getParentDomain(hostname: string): string {
+    function cookieDomainAttr(hostname: string): string {
+      if (hostname.endsWith(".workers.dev")) return "";
       const parts = hostname.split(".");
-      return parts.length > 2 ? parts.slice(-2).join(".") : hostname;
+      const parent = parts.length > 2 ? parts.slice(-2).join(".") : hostname;
+      return `; Domain=.${parent}`;
     }
 
     // Join flow: redirect to /join/:slug/done with JWT fragment
     if (joinOrg) {
       const joinDoneUrl = new URL(`${origin}/join/${joinOrg}/done`);
-      const joinCookie = `logi_auth_token=${authData.token}; Domain=.${getParentDomain(joinDoneUrl.hostname)}; Path=/; Max-Age=86400; Secure; SameSite=Lax`;
+      const joinCookie = `logi_auth_token=${authData.token}${cookieDomainAttr(joinDoneUrl.hostname)}; Path=/; Max-Age=86400; Secure; SameSite=Lax`;
       console.log(JSON.stringify({ event: "lw_login_join", joinOrg, externalOrgId }));
       return new Response(null, {
         status: 302,
@@ -110,7 +112,7 @@ export async function handleLineworksCallback(
       finalUrl.searchParams.set("lw_callback", "1");
     }
 
-    const cookieValue = `logi_auth_token=${authData.token}; Domain=.${getParentDomain(finalUrl.hostname)}; Path=/; Max-Age=86400; Secure; SameSite=Lax`;
+    const cookieValue = `logi_auth_token=${authData.token}${cookieDomainAttr(finalUrl.hostname)}; Path=/; Max-Age=86400; Secure; SameSite=Lax`;
     console.log(JSON.stringify({ event: "lw_login_success", externalOrgId, redirectUri }));
     return new Response(null, {
       status: 302,
