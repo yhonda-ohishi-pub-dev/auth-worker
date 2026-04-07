@@ -5,6 +5,7 @@
 
 import type { Env } from "../index";
 import { isAllowedRedirectUri } from "../lib/security";
+import { setAuthCookie } from "../lib/cookies";
 
 export async function handleAuthLogin(
   request: Request,
@@ -69,7 +70,13 @@ export async function handleAuthLogin(
   }
 
   console.log(JSON.stringify({ event: "login_success", username, orgId: organizationId }));
-  return Response.redirect(`${redirectUri}#${fragment.toString()}`, 302);
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: `${redirectUri}#${fragment.toString()}`,
+      "Set-Cookie": setAuthCookie(data.access_token),
+    },
+  });
 }
 
 function redirectToLogin(

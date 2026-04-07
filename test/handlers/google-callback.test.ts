@@ -187,7 +187,7 @@ describe("handleGoogleCallback", () => {
     expect(location).not.toContain("lw_callback");
   });
 
-  it("does not set Set-Cookie header (sessionStorage migration)", async () => {
+  it("sets logi_auth_token cookie on success (normal flow)", async () => {
     mockVerify.mockResolvedValue({ redirect_uri: "https://app1.test.example/page" });
     mockIsAllowed.mockReturnValue(true);
     const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJ0ZXN0LW9yZyJ9.sig";
@@ -209,7 +209,35 @@ describe("handleGoogleCallback", () => {
     );
     const req = new Request("https://auth.test.example/oauth/google/callback?code=abc&state=valid");
     const res = await handleGoogleCallback(req, env);
-    expect(res.headers.get("Set-Cookie")).toBeNull();
+    expect(res.headers.get("Set-Cookie")).toContain(`logi_auth_token=${jwt}`);
+  });
+
+  it("sets logi_auth_token cookie on join flow", async () => {
+    mockVerify.mockResolvedValue({
+      redirect_uri: "https://app1.test.example/page",
+      join_org: "my-company",
+    });
+    mockIsAllowed.mockReturnValue(true);
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJ0ZXN0LW9yZyJ9.sig";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ id_token: "mock-id-token" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ access_token: jwt, expires_in: 3600 }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        ),
+    );
+    const req = new Request("https://auth.test.example/oauth/google/callback?code=abc&state=valid");
+    const res = await handleGoogleCallback(req, env);
+    expect(res.headers.get("Set-Cookie")).toContain(`logi_auth_token=${jwt}`);
   });
 
   it("calls Google token endpoint with correct params", async () => {
