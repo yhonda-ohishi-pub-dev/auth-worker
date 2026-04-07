@@ -125,6 +125,30 @@ describe("handleWoffAuth", () => {
     expect(data.orgId).toBe("test-org");
   });
 
+  it("sets logi_auth_token cookie on success", async () => {
+    const fakeToken = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJ0ZXN0LW9yZyJ9.sig";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ token: fakeToken, expires_at: "2025-12-31T00:00:00Z" }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+    const req = new Request("https://auth.test.example/auth/woff", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accessToken: "tok",
+        domainId: "ohishi",
+        redirectUri: "https://app1.test.example/page",
+      }),
+    });
+    const res = await handleWoffAuth(req, env);
+    expect(res.headers.get("Set-Cookie")).toContain(`logi_auth_token=${fakeToken}`);
+  });
+
   it("extracts orgId from 'org' claim when tenant_id absent", async () => {
     // {"org":"org-from-claim"} base64
     const payload = btoa(JSON.stringify({ org: "org-from-claim" }));

@@ -6,6 +6,7 @@
  */
 
 import type { Env } from "../index";
+import { clearAuthCookie } from "../lib/cookies";
 
 export async function handleLogout(
   request: Request,
@@ -31,6 +32,9 @@ export async function handleLogout(
 </body></html>`;
 
   return new Response(html, {
-    headers: { "Content-Type": "text/html; charset=utf-8" },
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Set-Cookie": clearAuthCookie(),
+    },
   });
 }

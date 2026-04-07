@@ -264,10 +264,11 @@ export const useAuth = () => {
     clearStorage()
     clearLwDomain()
     authState.value = null
-    // auth-worker のログインページにリダイレクト
+    // auth-worker の /logout 経由でサーバー側 cookie もクリア → /login にリダイレクト
     if (authWorkerUrl) {
       const redirectUri = window.location.origin + '/?lw_callback=1'
-      window.location.href = `${authWorkerUrl}/login?redirect_uri=${encodeURIComponent(redirectUri)}`
+      const loginUrl = `${authWorkerUrl}/login?redirect_uri=${encodeURIComponent(redirectUri)}`
+      window.location.href = `${authWorkerUrl}/logout?redirect_uri=${encodeURIComponent(loginUrl)}`
     } else {
       window.location.href = window.location.origin + '/?logout=1'
     }

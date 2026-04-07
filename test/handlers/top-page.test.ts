@@ -13,14 +13,39 @@ describe("handleTopPage", () => {
     vi.clearAllMocks();
   });
 
-  it("returns HTML with correct Content-Type", async () => {
+  it("redirects to /login when no auth cookie", async () => {
     const env = createMockEnv();
     const req = new Request("https://auth.test.example/top");
 
     const res = await handleTopPage(req, env);
 
+    expect(res.status).toBe(302);
+    const location = res.headers.get("Location")!;
+    expect(location).toContain("/login");
+    expect(location).toContain("redirect_uri=");
+    expect(location).toContain(encodeURIComponent("https://auth.test.example/top"));
+  });
+
+  it("returns HTML when auth cookie is present", async () => {
+    const env = createMockEnv();
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: "logi_auth_token=some-jwt-token" },
+    });
+
+    const res = await handleTopPage(req, env);
+
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
+    expect(await res.text()).toBe("<html>mock top page</html>");
+  });
+
+  it("allows access with ?woff=1 even without cookie (WOFF flow)", async () => {
+    const env = createMockEnv();
+    const req = new Request("https://auth.test.example/top?woff=1&lw=ohishi");
+
+    const res = await handleTopPage(req, env);
+
+    expect(res.status).toBe(200);
     expect(await res.text()).toBe("<html>mock top page</html>");
   });
 
@@ -30,7 +55,9 @@ describe("handleTopPage", () => {
         "https://nuxt-pwa-carins.example,https://auth.test.example,https://ohishi2.example",
       AUTH_WORKER_ORIGIN: "https://auth.test.example",
     });
-    const req = new Request("https://auth.test.example/top");
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: "logi_auth_token=test-jwt" },
+    });
 
     await handleTopPage(req, env);
 
@@ -47,7 +74,9 @@ describe("handleTopPage", () => {
     const env = createMockEnv({
       ALLOWED_REDIRECT_ORIGINS: "https://nuxt-items.example",
     });
-    const req = new Request("https://auth.test.example/top");
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: "logi_auth_token=test-jwt" },
+    });
 
     await handleTopPage(req, env);
 
@@ -61,7 +90,9 @@ describe("handleTopPage", () => {
     const env = createMockEnv({
       ALLOWED_REDIRECT_ORIGINS: "https://unknown.example",
     });
-    const req = new Request("https://auth.test.example/top");
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: "logi_auth_token=test-jwt" },
+    });
 
     await handleTopPage(req, env);
 
@@ -76,7 +107,9 @@ describe("handleTopPage", () => {
       ALLOWED_REDIRECT_ORIGINS:
         "https://alc-app-staging.m-tama-ramu.workers.dev,https://dtako-admin-staging.m-tama-ramu.workers.dev,https://nuxt-ichibanboshi-staging.m-tama-ramu.workers.dev,https://nuxt-notify-staging.m-tama-ramu.workers.dev,https://nuxt-pwa-carins-staging.m-tama-ramu.workers.dev",
     });
-    const req = new Request("https://auth.test.example/top");
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: "logi_auth_token=test-jwt" },
+    });
 
     await handleTopPage(req, env);
 
@@ -97,7 +130,9 @@ describe("handleTopPage", () => {
       ALLOWED_REDIRECT_ORIGINS:
         "https://auth-worker-staging.m-tama-ramu.workers.dev,https://alc-app-staging.m-tama-ramu.workers.dev",
     });
-    const req = new Request("https://auth.test.example/top");
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: "logi_auth_token=test-jwt" },
+    });
 
     await handleTopPage(req, env);
 
@@ -114,7 +149,9 @@ describe("handleTopPage", () => {
       ALLOWED_REDIRECT_ORIGINS:
         "https://alc-staging.ippoan.org,https://carins-staging.ippoan.org,https://dtako-staging.ippoan.org,https://ichibanboshi-staging.ippoan.org,https://notify-staging.ippoan.org,https://items-staging.ippoan.org",
     });
-    const req = new Request("https://auth.test.example/top");
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: "logi_auth_token=test-jwt" },
+    });
 
     await handleTopPage(req, env);
 
@@ -136,7 +173,9 @@ describe("handleTopPage", () => {
       ALLOWED_REDIRECT_ORIGINS:
         "https://carins-staging.ippoan.org,https://nuxt-pwa-carins-staging.m-tama-ramu.workers.dev",
     });
-    const req = new Request("https://auth.test.example/top");
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: "logi_auth_token=test-jwt" },
+    });
 
     await handleTopPage(req, env);
 
@@ -148,7 +187,9 @@ describe("handleTopPage", () => {
 
   it("handles empty ALLOWED_REDIRECT_ORIGINS", async () => {
     const env = createMockEnv({ ALLOWED_REDIRECT_ORIGINS: "" });
-    const req = new Request("https://auth.test.example/top");
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: "logi_auth_token=test-jwt" },
+    });
 
     await handleTopPage(req, env);
 

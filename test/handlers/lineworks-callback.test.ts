@@ -205,7 +205,7 @@ describe("handleLineworksCallback", () => {
     expect(location).not.toContain("lw_callback");
   });
 
-  it("does not set Set-Cookie header", async () => {
+  it("sets logi_auth_token cookie on JSON response success", async () => {
     mockVerify.mockResolvedValue({
       redirect_uri: "https://app1.test.example/page",
       provider: "lineworks",
@@ -224,7 +224,75 @@ describe("handleLineworksCallback", () => {
     );
     const req = new Request("https://auth.test.example/oauth/lineworks/callback?code=abc&state=valid");
     const res = await handleLineworksCallback(req, env);
+    expect(res.headers.get("Set-Cookie")).toContain(`logi_auth_token=${jwt}`);
+  });
+
+  it("sets logi_auth_token cookie on 302 passthrough with token fragment", async () => {
+    mockVerify.mockResolvedValue({
+      redirect_uri: "https://app1.test.example/page",
+      provider: "lineworks",
+      external_org_id: "org1",
+    });
+    mockIsAllowed.mockReturnValue(true);
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJ0ZXN0LW9yZyJ9.sig";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { Location: `https://app1.test.example/page#token=${jwt}&expires_at=9999999999` },
+        }),
+      ),
+    );
+    const req = new Request("https://auth.test.example/oauth/lineworks/callback?code=abc&state=valid");
+    const res = await handleLineworksCallback(req, env);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Set-Cookie")).toContain(`logi_auth_token=${jwt}`);
+  });
+
+  it("does not set cookie on 302 passthrough without token fragment", async () => {
+    mockVerify.mockResolvedValue({
+      redirect_uri: "https://app1.test.example/page",
+      provider: "lineworks",
+      external_org_id: "org1",
+    });
+    mockIsAllowed.mockReturnValue(true);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { Location: "https://app1.test.example/page" },
+        }),
+      ),
+    );
+    const req = new Request("https://auth.test.example/oauth/lineworks/callback?code=abc&state=valid");
+    const res = await handleLineworksCallback(req, env);
+    expect(res.status).toBe(302);
     expect(res.headers.get("Set-Cookie")).toBeNull();
+  });
+
+  it("sets logi_auth_token cookie on join flow", async () => {
+    mockVerify.mockResolvedValue({
+      redirect_uri: "https://app1.test.example/page",
+      provider: "lineworks",
+      external_org_id: "org1",
+      join_org: "my-company",
+    });
+    mockIsAllowed.mockReturnValue(true);
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJ0ZXN0LW9yZyJ9.sig";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ token: jwt, expires_at: "2099-01-01T00:00:00Z" }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+    const req = new Request("https://auth.test.example/oauth/lineworks/callback?code=abc&state=valid");
+    const res = await handleLineworksCallback(req, env);
+    expect(res.headers.get("Set-Cookie")).toContain(`logi_auth_token=${jwt}`);
   });
 
   it("redirects to /login on backend failure", async () => {

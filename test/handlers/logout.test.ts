@@ -12,6 +12,13 @@ describe("handleLogout", () => {
     expect(res.headers.get("Content-Type")).toBe("text/html; charset=utf-8");
   });
 
+  it("clears logi_auth_token cookie via Set-Cookie header", async () => {
+    const req = new Request("https://auth.test.example/logout");
+    const res = await handleLogout(req, env);
+    expect(res.headers.get("Set-Cookie")).toContain("logi_auth_token=");
+    expect(res.headers.get("Set-Cookie")).toContain("Max-Age=0");
+  });
+
   it("clears sessionStorage and localStorage", async () => {
     const req = new Request("https://auth.test.example/logout");
     const res = await handleLogout(req, env);

@@ -7,6 +7,7 @@
 import type { Env } from "../index";
 import { corsJsonResponse } from "../lib/errors";
 import { isAllowedRedirectUri } from "../lib/security";
+import { setAuthCookie } from "../lib/cookies";
 
 interface WoffAuthRequest {
   accessToken: string;
@@ -68,10 +69,16 @@ export async function handleWoffAuth(
   }
 
   console.log(JSON.stringify({ event: "woff_auth_success", domainId, orgId }));
-  return corsJsonResponse({
-    token: data.token,
-    expiresAt: data.expires_at,
-    orgId,
+  // Set auth cookie + return JSON with CORS headers
+  const responseBody = JSON.stringify({ token: data.token, expiresAt: data.expires_at, orgId });
+  return new Response(responseBody, {
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      "Set-Cookie": setAuthCookie(data.token),
+    },
   });
 }
 

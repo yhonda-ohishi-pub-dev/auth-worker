@@ -5,6 +5,7 @@
 
 import type { Env } from "../index";
 import { verifyOAuthState, isAllowedRedirectUri } from "../lib/security";
+import { setAuthCookie } from "../lib/cookies";
 
 export async function handleLineworksCallback(
   request: Request,
@@ -54,11 +55,15 @@ export async function handleLineworksCallback(
   if (resp.status === 302 || resp.status === 307) {
     const location = resp.headers.get("Location");
     if (location) {
-      // Pass through the redirect response
-      return new Response(null, {
-        status: 302,
-        headers: { Location: location },
-      });
+      // Extract token from fragment for Set-Cookie
+      const headers: HeadersInit = { Location: location };
+      const fragIdx = location.indexOf("#");
+      if (fragIdx !== -1) {
+        const frag = new URLSearchParams(location.slice(fragIdx + 1));
+        const token = frag.get("token");
+        if (token) headers["Set-Cookie"] = setAuthCookie(token);
+      }
+      return new Response(null, { status: 302, headers });
     }
   }
 
@@ -93,6 +98,7 @@ export async function handleLineworksCallback(
         status: 302,
         headers: {
           Location: `${joinDoneUrl.toString()}#${fragment.toString()}`,
+          "Set-Cookie": setAuthCookie(authData.token),
         },
       });
     }
@@ -109,6 +115,7 @@ export async function handleLineworksCallback(
       status: 302,
       headers: {
         Location: `${finalUrl.toString()}#${fragment.toString()}`,
+        "Set-Cookie": setAuthCookie(authData.token),
       },
     });
   }

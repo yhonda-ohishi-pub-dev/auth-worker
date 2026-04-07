@@ -153,6 +153,27 @@ describe("handleAuthLogin", () => {
     expect(location).toContain("expires_at=");
   });
 
+  it("sets logi_auth_token cookie on success", async () => {
+    mockIsAllowed.mockReturnValue(true);
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJ0ZXN0LW9yZyJ9.sig";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ access_token: jwt, expires_in: 3600 }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+    const req = buildFormRequest({
+      redirect_uri: "https://app1.test.example/page",
+      username: "testuser",
+      password: "testpass",
+    });
+    const res = await handleAuthLogin(req, env);
+    expect(res.headers.get("Set-Cookie")).toContain(`logi_auth_token=${jwt}`);
+  });
+
   it("passes organization_id to backend", async () => {
     mockIsAllowed.mockReturnValue(true);
     const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJ0ZXN0LW9yZyJ9.sig";

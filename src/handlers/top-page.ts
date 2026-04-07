@@ -4,6 +4,7 @@
  */
 import type { Env } from "../index";
 import { renderTopPage, type AppEntry } from "../lib/top-html";
+import { getAuthCookie } from "../lib/cookies";
 
 /** Known app patterns — matches both production and staging URLs */
 const APP_PATTERNS: Array<{
@@ -34,9 +35,18 @@ export async function handleTopPage(
   request: Request,
   env: Env,
 ): Promise<Response> {
+  const url = new URL(request.url);
+
+  // Server-side auth check: redirect to /login if no auth cookie
+  // Skip for WOFF flow (?woff=1) — WOFF SDK handles auth client-side
+  if (!url.searchParams.has("woff") && !getAuthCookie(request)) {
+    const loginUrl = `${url.origin}/login?redirect_uri=${encodeURIComponent(url.origin + "/top")}`;
+    return Response.redirect(loginUrl, 302);
+  }
+
   console.log(JSON.stringify({ event: "top_page" }));
 
-  const requestOrigin = new URL(request.url).origin;
+  const requestOrigin = url.origin;
 
   const apps = (env.ALLOWED_REDIRECT_ORIGINS || "")
     .split(",")

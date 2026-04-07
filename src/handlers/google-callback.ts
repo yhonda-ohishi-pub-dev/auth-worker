@@ -5,6 +5,7 @@
 
 import type { Env } from "../index";
 import { verifyOAuthState, isAllowedRedirectUri } from "../lib/security";
+import { setAuthCookie } from "../lib/cookies";
 
 export async function handleGoogleCallback(
   request: Request,
@@ -111,6 +112,7 @@ export async function handleGoogleCallback(
       status: 302,
       headers: {
         Location: `${joinDoneUrl.toString()}#${fragment.toString()}`,
+        "Set-Cookie": setAuthCookie(token),
       },
     });
   }
@@ -127,6 +129,7 @@ export async function handleGoogleCallback(
     status: 302,
     headers: {
       Location: `${finalUrl.toString()}#${fragment.toString()}`,
+      "Set-Cookie": setAuthCookie(token),
     },
   });
 }
