@@ -5,6 +5,7 @@
 import type { Env } from "../index";
 import { renderTopPage, type AppEntry } from "../lib/top-html";
 import { getAuthCookie } from "../lib/cookies";
+import { getAllowedOrigins } from "../lib/config";
 
 /** Known app patterns — matches both production and staging URLs */
 const APP_PATTERNS: Array<{
@@ -50,7 +51,7 @@ export async function handleTopPage(
 
   const requestOrigin = url.origin;
 
-  const apps = (env.ALLOWED_REDIRECT_ORIGINS || "")
+  const apps = (await getAllowedOrigins(env))
     .split(",")
     .map((s: string) => s.trim())
     .filter(

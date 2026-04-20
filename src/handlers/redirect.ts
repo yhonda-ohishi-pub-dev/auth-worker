@@ -1,4 +1,5 @@
 import type { Env } from "../index";
+import { getAllowedOrigins } from "../lib/config";
 import { isAllowedRedirectUri } from "../lib/security";
 
 /** GET /redirect?to=<target_url>
@@ -14,7 +15,7 @@ export async function handleRedirect(
   const url = new URL(request.url);
   const target = url.searchParams.get("to");
 
-  if (!target || !isAllowedRedirectUri(target, env.ALLOWED_REDIRECT_ORIGINS)) {
+  if (!target || !isAllowedRedirectUri(target, await getAllowedOrigins(env))) {
     return new Response("Invalid redirect target", { status: 400 });
   }
 

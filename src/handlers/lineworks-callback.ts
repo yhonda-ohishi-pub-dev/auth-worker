@@ -4,6 +4,7 @@
  */
 
 import type { Env } from "../index";
+import { getAllowedOrigins } from "../lib/config";
 import { verifyOAuthState, isAllowedRedirectUri } from "../lib/security";
 import { setAuthCookie } from "../lib/cookies";
 
@@ -35,7 +36,7 @@ export async function handleLineworksCallback(
 
   const { redirect_uri: redirectUri, provider, external_org_id: externalOrgId, join_org: joinOrg } = stateData;
 
-  if (!redirectUri || !isAllowedRedirectUri(redirectUri, env.ALLOWED_REDIRECT_ORIGINS)) {
+  if (!redirectUri || !isAllowedRedirectUri(redirectUri, await getAllowedOrigins(env))) {
     return new Response("Invalid redirect_uri in state", { status: 400 });
   }
 

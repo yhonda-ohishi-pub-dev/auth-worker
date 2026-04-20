@@ -41,6 +41,8 @@ export interface Env {
   ALLOWED_REDIRECT_ORIGINS: string;
   ALC_API_ORIGIN: string;
   VERSION: string;
+  WORKER_ENV: string;
+  AUTH_CONFIG: KVNamespace;
 }
 
 function errorResponse(status: number, message: string): Response {

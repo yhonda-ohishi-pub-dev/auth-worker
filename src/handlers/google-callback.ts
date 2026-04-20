@@ -4,6 +4,7 @@
  */
 
 import type { Env } from "../index";
+import { getAllowedOrigins } from "../lib/config";
 import { verifyOAuthState, isAllowedRedirectUri } from "../lib/security";
 import { setAuthCookie } from "../lib/cookies";
 
@@ -37,7 +38,7 @@ export async function handleGoogleCallback(
   const { redirect_uri: redirectUri, join_org: joinOrg } = stateData;
 
   // Defense in depth: re-validate redirect_uri
-  if (!isAllowedRedirectUri(redirectUri, env.ALLOWED_REDIRECT_ORIGINS)) {
+  if (!isAllowedRedirectUri(redirectUri, await getAllowedOrigins(env))) {
     return new Response("Invalid redirect_uri in state", { status: 400 });
   }
 

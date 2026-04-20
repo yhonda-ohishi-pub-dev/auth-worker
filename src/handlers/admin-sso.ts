@@ -7,14 +7,15 @@
 
 import type { Env } from "../index";
 import { renderAdminSsoPage } from "../lib/admin-html";
+import { getAllowedOrigins } from "../lib/config";
 
 /** GET /admin/sso — 常に HTML を返す（認証チェックは JS 側） */
 export async function handleAdminSsoPage(
   _request: Request,
   env: Env,
 ): Promise<Response> {
-  // ALLOWED_REDIRECT_ORIGINS からフロントエンド URL を抽出（auth-worker 自身を除外）
-  const frontendOrigins = (env.ALLOWED_REDIRECT_ORIGINS || "")
+  // KV allowlist (origins:<env> ∪ origins:dev) からフロントエンド URL を抽出（auth-worker 自身を除外）
+  const frontendOrigins = (await getAllowedOrigins(env))
     .split(",")
     .map((s: string) => s.trim())
     .filter((s: string) => s && s !== env.AUTH_WORKER_ORIGIN);

@@ -1,5 +1,12 @@
 import type { Env } from "../../src/index";
 
+/** Minimal in-memory KV mock that satisfies the methods getAllowedOrigins calls. */
+export function createMockKV(data: Record<string, string> = {}): KVNamespace {
+  return {
+    get: async (key: string) => data[key] ?? null,
+  } as unknown as KVNamespace;
+}
+
 export function createMockEnv(overrides: Partial<Env> = {}): Env {
   return {
     GOOGLE_CLIENT_ID: "test-google-client-id",
@@ -10,6 +17,8 @@ export function createMockEnv(overrides: Partial<Env> = {}): Env {
       "https://app1.test.example,https://app2.test.example,https://auth.test.example",
     ALC_API_ORIGIN: "https://alc-api.test.example",
     VERSION: "test",
+    WORKER_ENV: "prod",
+    AUTH_CONFIG: createMockKV(),
     ...overrides,
   };
 }

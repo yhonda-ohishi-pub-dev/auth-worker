@@ -7,5 +7,7 @@ declare module "cloudflare:test" {
     AUTH_WORKER_ORIGIN: string;
     ALLOWED_REDIRECT_ORIGINS: string;
     ALC_API_ORIGIN: string;
+    WORKER_ENV: string;
+    AUTH_CONFIG: KVNamespace;
   }
 }

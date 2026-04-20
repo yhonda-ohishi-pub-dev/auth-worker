@@ -5,6 +5,7 @@
  */
 
 import type { Env } from "../index";
+import { getAllowedOrigins } from "../lib/config";
 import { corsJsonResponse } from "../lib/errors";
 import { isAllowedRedirectUri } from "../lib/security";
 import { setAuthCookie } from "../lib/cookies";
@@ -32,7 +33,7 @@ export async function handleWoffAuth(
     return corsJsonResponse({ error: "accessToken and domainId are required" }, 400);
   }
 
-  if (!redirectUri || !isAllowedRedirectUri(redirectUri, env.ALLOWED_REDIRECT_ORIGINS)) {
+  if (!redirectUri || !isAllowedRedirectUri(redirectUri, await getAllowedOrigins(env))) {
     return corsJsonResponse({ error: "Invalid or missing redirect_uri" }, 400);
   }
 
