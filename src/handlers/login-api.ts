@@ -4,6 +4,7 @@
  */
 
 import type { Env } from "../index";
+import { getAllowedOrigins } from "../lib/config";
 import { isAllowedRedirectUri } from "../lib/security";
 import { setAuthCookie } from "../lib/cookies";
 
@@ -20,7 +21,7 @@ export async function handleAuthLogin(
   const password = formData.get("password") as string | null;
   const redirectUri = formData.get("redirect_uri") as string | null;
 
-  if (!redirectUri || !isAllowedRedirectUri(redirectUri, env.ALLOWED_REDIRECT_ORIGINS)) {
+  if (!redirectUri || !isAllowedRedirectUri(redirectUri, await getAllowedOrigins(env))) {
     return new Response("Invalid redirect_uri", { status: 400 });
   }
 

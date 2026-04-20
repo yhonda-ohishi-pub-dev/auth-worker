@@ -1,4 +1,5 @@
 import type { Env } from "../index";
+import { getAllowedOrigins } from "../lib/config";
 import { isAllowedRedirectUri, generateOAuthState } from "../lib/security";
 
 export async function handleGoogleRedirect(
@@ -12,7 +13,7 @@ export async function handleGoogleRedirect(
   const url = new URL(request.url);
   const redirectUri = url.searchParams.get("redirect_uri");
 
-  if (!redirectUri || !isAllowedRedirectUri(redirectUri, env.ALLOWED_REDIRECT_ORIGINS)) {
+  if (!redirectUri || !isAllowedRedirectUri(redirectUri, await getAllowedOrigins(env))) {
     return new Response("Invalid or missing redirect_uri", { status: 400 });
   }
 

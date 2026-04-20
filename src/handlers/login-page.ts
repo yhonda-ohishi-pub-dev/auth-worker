@@ -1,4 +1,5 @@
 import type { Env } from "../index";
+import { getAllowedOrigins } from "../lib/config";
 import { isAllowedRedirectUri } from "../lib/security";
 import { renderLoginPage } from "../lib/html";
 
@@ -20,7 +21,7 @@ export async function handleLoginPage(
     );
   }
 
-  if (!isAllowedRedirectUri(redirectUri, env.ALLOWED_REDIRECT_ORIGINS)) {
+  if (!isAllowedRedirectUri(redirectUri, await getAllowedOrigins(env))) {
     return new Response("Invalid redirect_uri", { status: 400 });
   }
 

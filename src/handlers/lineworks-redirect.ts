@@ -2,6 +2,7 @@
  * LINE WORKS OAuth redirect — proxy to rust-alc-api
  */
 import type { Env } from "../index";
+import { getAllowedOrigins } from "../lib/config";
 import { isAllowedRedirectUri } from "../lib/security";
 
 export async function handleLineworksRedirect(
@@ -12,7 +13,7 @@ export async function handleLineworksRedirect(
   const redirectUri = url.searchParams.get("redirect_uri");
   const address = url.searchParams.get("address");
 
-  if (!redirectUri || !isAllowedRedirectUri(redirectUri, env.ALLOWED_REDIRECT_ORIGINS)) {
+  if (!redirectUri || !isAllowedRedirectUri(redirectUri, await getAllowedOrigins(env))) {
     return new Response("Invalid or missing redirect_uri", { status: 400 });
   }
 
