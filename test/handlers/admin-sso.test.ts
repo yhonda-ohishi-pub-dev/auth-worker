@@ -26,7 +26,7 @@ describe("handleAdminSsoPage", () => {
 
   it("filters out AUTH_WORKER_ORIGIN from ALLOWED_REDIRECT_ORIGINS", async () => {
     const env = createMockEnv({
-      ALLOWED_REDIRECT_ORIGINS: "https://app1.example,https://auth.test.example",
+      allowedOrigins: "https://app1.example,https://auth.test.example",
     });
     const request = new Request("https://auth.test.example/admin/sso");
 
@@ -36,7 +36,7 @@ describe("handleAdminSsoPage", () => {
   });
 
   it("handles empty ALLOWED_REDIRECT_ORIGINS", async () => {
-    const env = createMockEnv({ ALLOWED_REDIRECT_ORIGINS: "" });
+    const env = createMockEnv({ allowedOrigins: "" });
     const request = new Request("https://auth.test.example/admin/sso");
 
     await handleAdminSsoPage(request, env);

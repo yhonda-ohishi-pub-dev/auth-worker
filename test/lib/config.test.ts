@@ -35,18 +35,17 @@ describe("getAllowedOrigins", () => {
     expect(result).toBe("https://staging.example,https://dev.example");
   });
 
-  it("falls back to env.ALLOWED_REDIRECT_ORIGINS when KV is empty", async () => {
+  it("returns empty string when KV is empty", async () => {
     const env = createMockEnv({
       WORKER_ENV: "prod",
       AUTH_CONFIG: createMockKV(),
-      ALLOWED_REDIRECT_ORIGINS: "https://fallback.example",
     });
 
     const result = await getAllowedOrigins(env);
-    expect(result).toBe("https://fallback.example");
+    expect(result).toBe("");
   });
 
-  it("falls back to env.ALLOWED_REDIRECT_ORIGINS when KV throws", async () => {
+  it("returns empty string when KV throws", async () => {
     const env = createMockEnv({
       WORKER_ENV: "prod",
       AUTH_CONFIG: {
@@ -54,11 +53,10 @@ describe("getAllowedOrigins", () => {
           throw new Error("kv down");
         },
       } as unknown as KVNamespace,
-      ALLOWED_REDIRECT_ORIGINS: "https://fallback.example",
     });
 
     const result = await getAllowedOrigins(env);
-    expect(result).toBe("https://fallback.example");
+    expect(result).toBe("");
   });
 
   it("caches results across calls", async () => {
