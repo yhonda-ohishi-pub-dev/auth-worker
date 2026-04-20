@@ -104,11 +104,13 @@ const env = {
   GOOGLE_CLIENT_SECRET: "cs",
   OAUTH_STATE_SECRET: "os",
   AUTH_WORKER_ORIGIN: "https://auth.test.example",
-  ALLOWED_REDIRECT_ORIGINS: "https://app.test.example",
   ALC_API_ORIGIN: "https://alc-api.test.example",
   VERSION: "test",
   WORKER_ENV: "prod",
-  AUTH_CONFIG: { get: async () => null } as unknown as KVNamespace,
+  AUTH_CONFIG: {
+    get: async (key: string) =>
+      key === "origins:prod" ? "https://app.test.example" : null,
+  } as unknown as KVNamespace,
 };
 
 describe("Router (index.ts)", () => {

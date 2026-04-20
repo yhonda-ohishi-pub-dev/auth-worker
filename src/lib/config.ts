@@ -7,8 +7,6 @@
  *   origins:dev     - dev-proxy frontends (*-dev.ippoan.org)
  *
  * At runtime the worker reads `origins:<WORKER_ENV>` ∪ `origins:dev` and unions them.
- * Falls back to `env.ALLOWED_REDIRECT_ORIGINS` if KV is unavailable or returns no data
- * so the system keeps working during migration.
  */
 
 import type { Env } from "../index";
@@ -35,8 +33,7 @@ async function readKey(env: Env, key: string): Promise<string> {
 
 /**
  * Returns the combined allowlist for the current worker environment
- * (`origins:<WORKER_ENV>` ∪ `origins:dev`), falling back to the legacy
- * env variable if KV yields nothing.
+ * (`origins:<WORKER_ENV>` ∪ `origins:dev`).
  */
 export async function getAllowedOrigins(env: Env): Promise<string> {
   const workerEnv = env.WORKER_ENV || "prod";
@@ -45,12 +42,9 @@ export async function getAllowedOrigins(env: Env): Promise<string> {
     readKey(env, "origins:dev"),
   ]);
 
-  const combined = [envOrigins, devOrigins]
+  return [envOrigins, devOrigins]
     .filter((s) => s.length > 0)
     .join(",");
-
-  if (combined.length > 0) return combined;
-  return env.ALLOWED_REDIRECT_ORIGINS ?? "";
 }
 
 /** Test-only cache clear helper. */

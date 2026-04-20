@@ -38,7 +38,6 @@ export interface Env {
   GOOGLE_CLIENT_SECRET: string;
   OAUTH_STATE_SECRET: string;
   AUTH_WORKER_ORIGIN: string;
-  ALLOWED_REDIRECT_ORIGINS: string;
   ALC_API_ORIGIN: string;
   VERSION: string;
   WORKER_ENV: string;

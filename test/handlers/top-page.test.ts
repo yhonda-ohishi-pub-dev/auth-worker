@@ -61,7 +61,7 @@ describe("handleTopPage", () => {
 
   it("filters out auth origins and self from app list", async () => {
     const env = createMockEnv({
-      ALLOWED_REDIRECT_ORIGINS:
+      allowedOrigins:
         "https://nuxt-pwa-carins.example,https://auth.test.example,https://ohishi2.example",
       AUTH_WORKER_ORIGIN: "https://auth.test.example",
     });
@@ -82,7 +82,7 @@ describe("handleTopPage", () => {
 
   it("maps nuxt-items origin correctly", async () => {
     const env = createMockEnv({
-      ALLOWED_REDIRECT_ORIGINS: "https://nuxt-items.example",
+      allowedOrigins: "https://nuxt-items.example",
     });
     const req = new Request("https://auth.test.example/top", {
       headers: { Cookie: "logi_auth_token=test-jwt" },
@@ -98,7 +98,7 @@ describe("handleTopPage", () => {
 
   it("falls back to generic app entry for unknown origins", async () => {
     const env = createMockEnv({
-      ALLOWED_REDIRECT_ORIGINS: "https://unknown.example",
+      allowedOrigins: "https://unknown.example",
     });
     const req = new Request("https://auth.test.example/top", {
       headers: { Cookie: "logi_auth_token=test-jwt" },
@@ -114,7 +114,7 @@ describe("handleTopPage", () => {
 
   it("maps staging URLs correctly", async () => {
     const env = createMockEnv({
-      ALLOWED_REDIRECT_ORIGINS:
+      allowedOrigins:
         "https://alc-app-staging.m-tama-ramu.workers.dev,https://dtako-admin-staging.m-tama-ramu.workers.dev,https://nuxt-ichibanboshi-staging.m-tama-ramu.workers.dev,https://nuxt-notify-staging.m-tama-ramu.workers.dev,https://nuxt-pwa-carins-staging.m-tama-ramu.workers.dev",
     });
     const req = new Request("https://auth.test.example/top", {
@@ -137,7 +137,7 @@ describe("handleTopPage", () => {
 
   it("filters out auth-worker-staging URL", async () => {
     const env = createMockEnv({
-      ALLOWED_REDIRECT_ORIGINS:
+      allowedOrigins:
         "https://auth-worker-staging.m-tama-ramu.workers.dev,https://alc-app-staging.m-tama-ramu.workers.dev",
     });
     const req = new Request("https://auth.test.example/top", {
@@ -156,7 +156,7 @@ describe("handleTopPage", () => {
 
   it("maps ippoan.org staging subdomains correctly", async () => {
     const env = createMockEnv({
-      ALLOWED_REDIRECT_ORIGINS:
+      allowedOrigins:
         "https://alc-staging.ippoan.org,https://carins-staging.ippoan.org,https://dtako-staging.ippoan.org,https://ichibanboshi-staging.ippoan.org,https://notify-staging.ippoan.org,https://items-staging.ippoan.org",
     });
     const req = new Request("https://auth.test.example/top", {
@@ -180,7 +180,7 @@ describe("handleTopPage", () => {
 
   it("deduplicates apps by name, keeping first (ippoan.org) URL", async () => {
     const env = createMockEnv({
-      ALLOWED_REDIRECT_ORIGINS:
+      allowedOrigins:
         "https://carins-staging.ippoan.org,https://nuxt-pwa-carins-staging.m-tama-ramu.workers.dev",
     });
     const req = new Request("https://auth.test.example/top", {
@@ -196,7 +196,7 @@ describe("handleTopPage", () => {
   });
 
   it("handles empty ALLOWED_REDIRECT_ORIGINS", async () => {
-    const env = createMockEnv({ ALLOWED_REDIRECT_ORIGINS: "" });
+    const env = createMockEnv({ allowedOrigins: "" });
     const req = new Request("https://auth.test.example/top", {
       headers: { Cookie: "logi_auth_token=test-jwt" },
     });
