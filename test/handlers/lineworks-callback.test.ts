@@ -387,4 +387,67 @@ describe("handleLineworksCallback", () => {
     const res = await handleLineworksCallback(req, env);
     expect(res.status).toBe(302);
   });
+
+  it("returns 403 on JSON path when tenant not in TENANT_ACL for ohishi-exp target", async () => {
+    const { createMockKV } = await import("../helpers/mock-env");
+    const aclEnv = createMockEnv({
+      AUTH_CONFIG: createMockKV({
+        "origins:prod": "https://dtako-admin.example",
+        "app-orgs": JSON.stringify({ "dtako-admin": "ohishi-exp" }),
+      }),
+      TENANT_ACL: JSON.stringify({ "ohishi-exp": ["allowed-tenant"] }),
+    });
+    mockVerify.mockResolvedValue({
+      redirect_uri: "https://dtako-admin.example/page",
+      provider: "lineworks",
+      external_org_id: "org1",
+    });
+    mockIsAllowed.mockReturnValue(true);
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJub3QtYWxsb3dlZCJ9.sig";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify({ token: jwt, expires_at: "2099-01-01" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    const req = new Request("https://auth.test.example/oauth/lineworks/callback?code=abc&state=valid");
+    const res = await handleLineworksCallback(req, aclEnv);
+    expect(res.status).toBe(403);
+    expect(await res.text()).toContain("許可されていません");
+  });
+
+  it("returns 403 on 302 passthrough path when tenant not in TENANT_ACL for ohishi-exp target", async () => {
+    const { createMockKV } = await import("../helpers/mock-env");
+    const aclEnv = createMockEnv({
+      AUTH_CONFIG: createMockKV({
+        "origins:prod": "https://dtako-admin.example",
+        "app-orgs": JSON.stringify({ "dtako-admin": "ohishi-exp" }),
+      }),
+      TENANT_ACL: JSON.stringify({ "ohishi-exp": ["allowed-tenant"] }),
+    });
+    mockVerify.mockResolvedValue({
+      redirect_uri: "https://dtako-admin.example/page",
+      provider: "lineworks",
+      external_org_id: "org1",
+    });
+    mockIsAllowed.mockReturnValue(true);
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJub3QtYWxsb3dlZCJ9.sig";
+    // rust-alc-api returned a 302 with token in the Location fragment
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(null, {
+          status: 302,
+          headers: { Location: `https://dtako-admin.example/page#token=${jwt}` },
+        }),
+      ),
+    );
+    const req = new Request("https://auth.test.example/oauth/lineworks/callback?code=abc&state=valid");
+    const res = await handleLineworksCallback(req, aclEnv);
+    expect(res.status).toBe(403);
+    expect(await res.text()).toContain("許可されていません");
+  });
 });

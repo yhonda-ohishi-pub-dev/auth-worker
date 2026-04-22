@@ -5,6 +5,7 @@
 
 import type { Env } from "../index";
 import { getAllowedOrigins } from "../lib/config";
+import { checkOrgAccess } from "../lib/acl";
 import { isAllowedRedirectUri } from "../lib/security";
 import { setAuthCookie } from "../lib/cookies";
 
@@ -60,14 +61,23 @@ export async function handleAuthLogin(
   });
 
   // Extract org_id from JWT payload for convenience
+  let tenantId = "";
   const payloadB64 = data.access_token.split(".")[1];
   if (payloadB64) {
     try {
       const payload = JSON.parse(atob(payloadB64));
-      fragment.set("org_id", payload.tenant_id || payload.org || "");
+      tenantId = payload.tenant_id || payload.org || "";
+      fragment.set("org_id", tenantId);
     } catch {
       // ignore decode error
     }
+  }
+
+  // Enforce per-org tenant ACL on the final redirect target.
+  const redirectOrigin = new URL(redirectUri).origin;
+  if (!(await checkOrgAccess(env, redirectOrigin, tenantId))) {
+    console.log(JSON.stringify({ event: "login_acl_denied", redirectUri, tenantId }));
+    return new Response("このアプリへのアクセスが許可されていません", { status: 403 });
   }
 
   console.log(JSON.stringify({ event: "login_success", username, orgId: organizationId }));

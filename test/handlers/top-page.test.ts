@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { createMockEnv } from "../helpers/mock-env";
+import { createMockEnv, createMockKV } from "../helpers/mock-env";
 
 vi.mock("../../src/lib/top-html", () => ({
   renderTopPage: vi.fn(() => "<html>mock top page</html>"),
@@ -7,6 +7,16 @@ vi.mock("../../src/lib/top-html", () => ({
 
 import { handleTopPage } from "../../src/handlers/top-page";
 import { renderTopPage } from "../../src/lib/top-html";
+
+/**
+ * Build an HS256-looking JWT (unsigned — only the payload needs to be valid
+ * base64 JSON, since the handler just decodes without verifying).
+ */
+function jwtWithPayload(payload: Record<string, unknown>): string {
+  const header = btoa(JSON.stringify({ alg: "HS256", typ: "JWT" }));
+  const body = btoa(JSON.stringify(payload));
+  return `${header}.${body}.fake-signature`;
+}
 
 describe("handleTopPage", () => {
   beforeEach(() => {
@@ -204,5 +214,140 @@ describe("handleTopPage", () => {
     await handleTopPage(req, env);
 
     expect(renderTopPage).toHaveBeenCalledWith([], "https://auth.test.example");
+  });
+
+  it("hides origins:wt entries from the rendered tile list", async () => {
+    const env = createMockEnv({
+      AUTH_CONFIG: createMockKV({
+        "origins:prod": "https://nuxt-pwa-carins.example",
+        "origins:wt": "https://vast-requests-kurt-showing.trycloudflare.com",
+      }),
+    });
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: "logi_auth_token=test-jwt" },
+    });
+
+    await handleTopPage(req, env);
+
+    expect(renderTopPage).toHaveBeenCalledWith(
+      [{ name: "車検証管理", url: "https://nuxt-pwa-carins.example", icon: "車", description: "車検証・ファイル管理" }],
+      "https://auth.test.example",
+    );
+    const lastCall = vi.mocked(renderTopPage).mock.calls[0]!;
+    const calledApps = lastCall[0];
+    expect(calledApps.some((a: { url: string }) => a.url.includes("trycloudflare.com"))).toBe(false);
+  });
+
+  it("shows ohishi-exp tile when tenant_id is in TENANT_ACL", async () => {
+    const token = jwtWithPayload({ tenant_id: "tenant-a" });
+    const env = createMockEnv({
+      AUTH_CONFIG: createMockKV({
+        "origins:prod": "https://dtako-admin.example",
+        "app-orgs": JSON.stringify({ "dtako-admin": "ohishi-exp" }),
+      }),
+      TENANT_ACL: JSON.stringify({ "ohishi-exp": ["tenant-a"] }),
+    });
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: `logi_auth_token=${token}` },
+    });
+
+    await handleTopPage(req, env);
+
+    expect(renderTopPage).toHaveBeenCalledWith(
+      [{ name: "DTako 管理", url: "https://dtako-admin.example", icon: "DVR", description: "ドライブレコーダーログ" }],
+      "https://auth.test.example",
+    );
+  });
+
+  it("hides ohishi-exp tile when tenant_id is not in TENANT_ACL", async () => {
+    const token = jwtWithPayload({ tenant_id: "tenant-z" });
+    const env = createMockEnv({
+      AUTH_CONFIG: createMockKV({
+        "origins:prod": "https://dtako-admin.example,https://nuxt-pwa-carins.example",
+        "app-orgs": JSON.stringify({ "dtako-admin": "ohishi-exp" }),
+      }),
+      TENANT_ACL: JSON.stringify({ "ohishi-exp": ["tenant-a"] }),
+    });
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: `logi_auth_token=${token}` },
+    });
+
+    await handleTopPage(req, env);
+
+    expect(renderTopPage).toHaveBeenCalledWith(
+      [{ name: "車検証管理", url: "https://nuxt-pwa-carins.example", icon: "車", description: "車検証・ファイル管理" }],
+      "https://auth.test.example",
+    );
+  });
+
+  it("hides ohishi-exp tile when cookie JWT has no tenant_id", async () => {
+    const token = jwtWithPayload({ sub: "user-1" });
+    const env = createMockEnv({
+      AUTH_CONFIG: createMockKV({
+        "origins:prod": "https://dtako-admin.example",
+        "app-orgs": JSON.stringify({ "dtako-admin": "ohishi-exp" }),
+      }),
+      TENANT_ACL: JSON.stringify({ "ohishi-exp": ["tenant-a"] }),
+    });
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: `logi_auth_token=${token}` },
+    });
+
+    await handleTopPage(req, env);
+
+    expect(renderTopPage).toHaveBeenCalledWith([], "https://auth.test.example");
+  });
+
+  it("hides ohishi-exp tile when cookie JWT payload is malformed", async () => {
+    const env = createMockEnv({
+      AUTH_CONFIG: createMockKV({
+        "origins:prod": "https://dtako-admin.example",
+        "app-orgs": JSON.stringify({ "dtako-admin": "ohishi-exp" }),
+      }),
+      TENANT_ACL: JSON.stringify({ "ohishi-exp": ["tenant-a"] }),
+    });
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: "logi_auth_token=not.a.valid.jwt" },
+    });
+
+    await handleTopPage(req, env);
+
+    expect(renderTopPage).toHaveBeenCalledWith([], "https://auth.test.example");
+  });
+
+  it("hides ohishi-exp tile when TENANT_ACL secret is missing (fail-closed)", async () => {
+    const token = jwtWithPayload({ tenant_id: "tenant-a" });
+    const env = createMockEnv({
+      AUTH_CONFIG: createMockKV({
+        "origins:prod": "https://dtako-admin.example",
+        "app-orgs": JSON.stringify({ "dtako-admin": "ohishi-exp" }),
+      }),
+    });
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: `logi_auth_token=${token}` },
+    });
+
+    await handleTopPage(req, env);
+
+    expect(renderTopPage).toHaveBeenCalledWith([], "https://auth.test.example");
+  });
+
+  it("leaves ippoan tiles visible regardless of tenant_id", async () => {
+    const env = createMockEnv({
+      AUTH_CONFIG: createMockKV({
+        "origins:prod": "https://nuxt-pwa-carins.example",
+        "app-orgs": JSON.stringify({ "dtako-admin": "ohishi-exp" }),
+      }),
+    });
+    const req = new Request("https://auth.test.example/top", {
+      headers: { Cookie: "logi_auth_token=no-tenant-claim.test" },
+    });
+
+    await handleTopPage(req, env);
+
+    expect(renderTopPage).toHaveBeenCalledWith(
+      [{ name: "車検証管理", url: "https://nuxt-pwa-carins.example", icon: "車", description: "車検証・ファイル管理" }],
+      "https://auth.test.example",
+    );
   });
 });

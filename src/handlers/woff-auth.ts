@@ -6,6 +6,7 @@
 
 import type { Env } from "../index";
 import { getAllowedOrigins } from "../lib/config";
+import { checkOrgAccess } from "../lib/acl";
 import { corsJsonResponse } from "../lib/errors";
 import { isAllowedRedirectUri } from "../lib/security";
 import { setAuthCookie } from "../lib/cookies";
@@ -67,6 +68,13 @@ export async function handleWoffAuth(
     } catch {
       // ignore decode error
     }
+  }
+
+  // Enforce per-org tenant ACL. WOFF returns JSON, so reject with CORS JSON.
+  const redirectOrigin = new URL(redirectUri).origin;
+  if (!(await checkOrgAccess(env, redirectOrigin, orgId))) {
+    console.log(JSON.stringify({ event: "woff_auth_acl_denied", domainId, orgId }));
+    return corsJsonResponse({ error: "このアプリへのアクセスが許可されていません" }, 403);
   }
 
   console.log(JSON.stringify({ event: "woff_auth_success", domainId, orgId }));

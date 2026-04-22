@@ -9,6 +9,9 @@
  *                     Read **without** in-memory cache so entries added via
  *                     `wrangler kv key put` take effect immediately — only
  *                     KV edge propagation (seconds) remains.
+ *   app-orgs        - JSON map of app-token → github-org, e.g.
+ *                     `{"dtako-admin":"ohishi-exp","ohishi2":"ohishi-exp"}`.
+ *                     Used to restrict specific orgs to allowlisted tenants.
  *
  * At runtime the worker reads `origins:<WORKER_ENV>` ∪ `origins:dev` ∪ `origins:wt`
  * and unions them.
@@ -52,6 +55,9 @@ async function readKeyNoCache(env: Env, key: string): Promise<string> {
 /**
  * Returns the combined allowlist for the current worker environment
  * (`origins:<WORKER_ENV>` ∪ `origins:dev` ∪ `origins:wt`).
+ *
+ * Used by OAuth redirect validators. wt entries are honored so /wt-quick
+ * worktree tunnels can complete OAuth login.
  */
 export async function getAllowedOrigins(env: Env): Promise<string> {
   const workerEnv = env.WORKER_ENV || "prod";
@@ -64,6 +70,63 @@ export async function getAllowedOrigins(env: Env): Promise<string> {
   return [envOrigins, devOrigins, wtOrigins]
     .filter((s) => s.length > 0)
     .join(",");
+}
+
+/**
+ * Returns the origins shown on the /top page. Excludes `origins:wt` so
+ * ephemeral worktree tunnels are not advertised as apps.
+ */
+export async function getDisplayOrigins(env: Env): Promise<string> {
+  const workerEnv = env.WORKER_ENV || "prod";
+  const [envOrigins, devOrigins] = await Promise.all([
+    readKey(env, `origins:${workerEnv}`),
+    readKey(env, "origins:dev"),
+  ]);
+
+  return [envOrigins, devOrigins].filter((s) => s.length > 0).join(",");
+}
+
+/**
+ * Classify an origin URL by its GitHub org. Returns "ohishi-exp" when the
+ * origin URL contains a token registered under ohishi-exp in the `app-orgs`
+ * KV JSON map, otherwise "ippoan" (default — permissive).
+ */
+export async function classifyOrigin(
+  env: Env,
+  origin: string,
+): Promise<"ohishi-exp" | "ippoan"> {
+  const raw = await readKey(env, "app-orgs");
+  if (!raw) return "ippoan";
+  let map: Record<string, string>;
+  try {
+    map = JSON.parse(raw);
+  } catch {
+    return "ippoan";
+  }
+  for (const [token, org] of Object.entries(map)) {
+    if (org === "ohishi-exp" && origin.includes(token)) {
+      return "ohishi-exp";
+    }
+  }
+  return "ippoan";
+}
+
+/**
+ * True iff the given origin URL is listed in `origins:wt` (ephemeral
+ * worktree tunnels). Reads fresh from KV so newly-registered tunnels are
+ * recognized immediately.
+ */
+export async function isWorktreeOrigin(
+  env: Env,
+  origin: string,
+): Promise<boolean> {
+  const raw = await readKeyNoCache(env, "origins:wt");
+  if (!raw) return false;
+  return raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .includes(origin);
 }
 
 /** Test-only cache clear helper. */
