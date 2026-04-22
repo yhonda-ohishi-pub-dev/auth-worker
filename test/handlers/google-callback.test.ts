@@ -315,4 +315,106 @@ describe("handleGoogleCallback", () => {
     const res = await handleGoogleCallback(req, env);
     expect(res.status).toBe(302);
   });
+
+  it("returns 403 when tenant is not in TENANT_ACL for an ohishi-exp redirect target", async () => {
+    const aclEnv = createMockEnv({
+      AUTH_CONFIG: (await import("../helpers/mock-env")).createMockKV({
+        "origins:prod": "https://dtako-admin.example",
+        "app-orgs": JSON.stringify({ "dtako-admin": "ohishi-exp" }),
+      }),
+      TENANT_ACL: JSON.stringify({ "ohishi-exp": ["allowed-tenant"] }),
+    });
+    mockVerify.mockResolvedValue({ redirect_uri: "https://dtako-admin.example/page" });
+    mockIsAllowed.mockReturnValue(true);
+    // JWT: {"tenant_id":"some-other-tenant"}
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJzb21lLW90aGVyLXRlbmFudCJ9.sig";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ id_token: "mock-id-token" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ access_token: jwt, expires_in: 3600 }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        ),
+    );
+    const req = new Request("https://auth.test.example/oauth/google/callback?code=abc&state=valid");
+    const res = await handleGoogleCallback(req, aclEnv);
+    expect(res.status).toBe(403);
+    expect(await res.text()).toContain("許可されていません");
+  });
+
+  it("allows redirect when tenant IS in TENANT_ACL for an ohishi-exp target", async () => {
+    const aclEnv = createMockEnv({
+      AUTH_CONFIG: (await import("../helpers/mock-env")).createMockKV({
+        "origins:prod": "https://dtako-admin.example",
+        "app-orgs": JSON.stringify({ "dtako-admin": "ohishi-exp" }),
+      }),
+      TENANT_ACL: JSON.stringify({ "ohishi-exp": ["allowed-tenant"] }),
+    });
+    mockVerify.mockResolvedValue({ redirect_uri: "https://dtako-admin.example/page" });
+    mockIsAllowed.mockReturnValue(true);
+    // JWT: {"tenant_id":"allowed-tenant"}
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJhbGxvd2VkLXRlbmFudCJ9.sig";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ id_token: "mock-id-token" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ access_token: jwt, expires_in: 3600 }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        ),
+    );
+    const req = new Request("https://auth.test.example/oauth/google/callback?code=abc&state=valid");
+    const res = await handleGoogleCallback(req, aclEnv);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toContain("https://dtako-admin.example/page");
+  });
+
+  it("wt origin bypasses ACL even with no tenant_id", async () => {
+    const aclEnv = createMockEnv({
+      AUTH_CONFIG: (await import("../helpers/mock-env")).createMockKV({
+        "origins:prod": "https://a.example",
+        "origins:wt": "https://vast.trycloudflare.com",
+        "app-orgs": JSON.stringify({ vast: "ohishi-exp" }),
+      }),
+      TENANT_ACL: JSON.stringify({ "ohishi-exp": [] }),
+    });
+    mockVerify.mockResolvedValue({ redirect_uri: "https://vast.trycloudflare.com/callback" });
+    mockIsAllowed.mockReturnValue(true);
+    // Token without payload → tenant_id "" → would normally be denied for ohishi-exp
+    vi.stubGlobal(
+      "fetch",
+      vi.fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ id_token: "mock" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ access_token: "no-payload-token", expires_in: 3600 }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        ),
+    );
+    const req = new Request("https://auth.test.example/oauth/google/callback?code=abc&state=valid");
+    const res = await handleGoogleCallback(req, aclEnv);
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toContain("https://vast.trycloudflare.com/callback");
+  });
 });

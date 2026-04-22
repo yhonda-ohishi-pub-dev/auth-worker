@@ -275,4 +275,34 @@ describe("handleAuthLogin", () => {
     const res = await handleAuthLogin(req, env);
     expect(res.status).toBe(302);
   });
+
+  it("returns 403 when tenant is not in TENANT_ACL for an ohishi-exp redirect target", async () => {
+    const { createMockKV } = await import("../helpers/mock-env");
+    const aclEnv = createMockEnv({
+      AUTH_CONFIG: createMockKV({
+        "origins:prod": "https://dtako-admin.example",
+        "app-orgs": JSON.stringify({ "dtako-admin": "ohishi-exp" }),
+      }),
+      TENANT_ACL: JSON.stringify({ "ohishi-exp": ["allowed-tenant"] }),
+    });
+    mockIsAllowed.mockReturnValue(true);
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJub3QtYWxsb3dlZCJ9.sig";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(JSON.stringify({ access_token: jwt, expires_in: 3600 }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+    const req = buildFormRequest({
+      redirect_uri: "https://dtako-admin.example/page",
+      username: "testuser",
+      password: "testpass",
+    });
+    const res = await handleAuthLogin(req, aclEnv);
+    expect(res.status).toBe(403);
+    expect(await res.text()).toContain("許可されていません");
+  });
 });

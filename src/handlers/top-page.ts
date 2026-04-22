@@ -5,7 +5,8 @@
 import type { Env } from "../index";
 import { renderTopPage, type AppEntry } from "../lib/top-html";
 import { getAuthCookie } from "../lib/cookies";
-import { getAllowedOrigins } from "../lib/config";
+import { classifyOrigin, getDisplayOrigins } from "../lib/config";
+import { isTenantInOrgAllowlist } from "../lib/acl";
 
 /** Known app patterns — matches both production and staging URLs */
 const APP_PATTERNS: Array<{
@@ -33,6 +34,19 @@ function originToApp(origin: string): AppEntry {
   return { name: origin, url: origin, icon: "App", description: "" };
 }
 
+function tenantIdFromCookie(request: Request): string {
+  const token = getAuthCookie(request);
+  if (!token) return "";
+  const payloadB64 = token.split(".")[1];
+  if (!payloadB64) return "";
+  try {
+    const payload = JSON.parse(atob(payloadB64));
+    return payload.tenant_id || payload.org || "";
+  } catch {
+    return "";
+  }
+}
+
 export async function handleTopPage(
   request: Request,
   env: Env,
@@ -50,8 +64,9 @@ export async function handleTopPage(
   console.log(JSON.stringify({ event: "top_page" }));
 
   const requestOrigin = url.origin;
+  const tenantId = tenantIdFromCookie(request);
 
-  const apps = (await getAllowedOrigins(env))
+  const apps = (await getDisplayOrigins(env))
     .split(",")
     .map((s: string) => s.trim())
     .filter(
@@ -68,7 +83,17 @@ export async function handleTopPage(
     return true;
   });
 
-  const html = renderTopPage(uniqueApps, requestOrigin);
+  // Drop ohishi-exp tiles unless the cookie JWT's tenant_id is in TENANT_ACL.
+  const visibleApps: AppEntry[] = [];
+  for (const app of uniqueApps) {
+    const org = await classifyOrigin(env, app.url);
+    if (org === "ohishi-exp" && !isTenantInOrgAllowlist(env, "ohishi-exp", tenantId)) {
+      continue;
+    }
+    visibleApps.push(app);
+  }
+
+  const html = renderTopPage(visibleApps, requestOrigin);
   return new Response(html, {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });

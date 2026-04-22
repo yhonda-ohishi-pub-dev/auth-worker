@@ -42,6 +42,10 @@ export interface Env {
   VERSION: string;
   WORKER_ENV: string;
   AUTH_CONFIG: KVNamespace;
+  /** JSON map of github-org → allowlisted tenant_ids. Example:
+   *  `{"ohishi-exp":["<uuid-1>","<uuid-2>"]}`.
+   *  Missing / malformed → deny all ohishi-exp access (fail-closed). */
+  TENANT_ACL?: string;
 }
 
 function errorResponse(status: number, message: string): Response {

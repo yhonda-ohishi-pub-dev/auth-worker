@@ -228,6 +228,40 @@ describe("handleWoffAuth", () => {
     const data = (await res.json()) as { orgId: string };
     expect(data.orgId).toBe("");
   });
+
+  it("returns 403 when tenant is not in TENANT_ACL for an ohishi-exp redirect target", async () => {
+    const { createMockKV } = await import("../helpers/mock-env");
+    const aclEnv = createMockEnv({
+      AUTH_CONFIG: createMockKV({
+        "origins:prod": "https://dtako-admin.example",
+        "app-orgs": JSON.stringify({ "dtako-admin": "ohishi-exp" }),
+      }),
+      TENANT_ACL: JSON.stringify({ "ohishi-exp": ["allowed-tenant"] }),
+    });
+    const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJ0ZW5hbnRfaWQiOiJub3QtYWxsb3dlZCJ9.sig";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({ token: jwt, expires_at: "2025-12-31T00:00:00Z" }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+    const req = new Request("https://auth.test.example/auth/woff", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accessToken: "tok",
+        domainId: "ohishi",
+        redirectUri: "https://dtako-admin.example/page",
+      }),
+    });
+    const res = await handleWoffAuth(req, aclEnv);
+    expect(res.status).toBe(403);
+    const data = (await res.json()) as { error: string };
+    expect(data.error).toContain("許可されていません");
+  });
 });
 
 // ---------- handleWoffConfig ----------

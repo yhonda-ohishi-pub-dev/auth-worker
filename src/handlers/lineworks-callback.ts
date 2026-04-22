@@ -5,6 +5,7 @@
 
 import type { Env } from "../index";
 import { getAllowedOrigins } from "../lib/config";
+import { checkOrgAccess } from "../lib/acl";
 import { verifyOAuthState, isAllowedRedirectUri } from "../lib/security";
 import { setAuthCookie } from "../lib/cookies";
 
@@ -56,13 +57,21 @@ export async function handleLineworksCallback(
   if (resp.status === 302 || resp.status === 307) {
     const location = resp.headers.get("Location");
     if (location) {
-      // Extract token from fragment for Set-Cookie
+      // Extract token from fragment for Set-Cookie + ACL check
       const headers: HeadersInit = { Location: location };
       const fragIdx = location.indexOf("#");
       if (fragIdx !== -1) {
         const frag = new URLSearchParams(location.slice(fragIdx + 1));
         const token = frag.get("token");
-        if (token) headers["Set-Cookie"] = setAuthCookie(token, new URL(request.url).hostname);
+        if (token) {
+          const tenantId = extractTenantId(token);
+          const redirectOrigin = new URL(redirectUri).origin;
+          if (!(await checkOrgAccess(env, redirectOrigin, tenantId))) {
+            console.log(JSON.stringify({ event: "lw_login_acl_denied", redirectUri, tenantId }));
+            return new Response("このアプリへのアクセスが許可されていません", { status: 403 });
+          }
+          headers["Set-Cookie"] = setAuthCookie(token, new URL(request.url).hostname);
+        }
       }
       return new Response(null, { status: 302, headers });
     }
@@ -81,14 +90,14 @@ export async function handleLineworksCallback(
     });
 
     // Extract org_id from JWT payload
-    const payloadB64 = authData.token.split(".")[1];
-    if (payloadB64) {
-      try {
-        const payload = JSON.parse(atob(payloadB64));
-        fragment.set("org_id", payload.tenant_id || payload.org || "");
-      } catch {
-        // ignore decode error
-      }
+    const tenantId = extractTenantId(authData.token);
+    if (tenantId) fragment.set("org_id", tenantId);
+
+    // Enforce per-org tenant ACL before issuing the final redirect.
+    const redirectOrigin = new URL(redirectUri).origin;
+    if (!(await checkOrgAccess(env, redirectOrigin, tenantId))) {
+      console.log(JSON.stringify({ event: "lw_login_acl_denied", redirectUri, tenantId }));
+      return new Response("このアプリへのアクセスが許可されていません", { status: 403 });
     }
 
     // Join flow: redirect to /join/:slug/done with JWT fragment
@@ -137,4 +146,15 @@ function redirectToLogin(
     error,
   });
   return Response.redirect(`${origin}/login?${params.toString()}`, 302);
+}
+
+function extractTenantId(token: string): string {
+  const payloadB64 = token.split(".")[1];
+  if (!payloadB64) return "";
+  try {
+    const payload = JSON.parse(atob(payloadB64));
+    return payload.tenant_id || payload.org || "";
+  } catch {
+    return "";
+  }
 }
