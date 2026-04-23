@@ -46,6 +46,11 @@ describe("renderAdminNotifyPage", () => {
     expect(html).toContain("/notify/groups");
   });
 
+  it("prepends /api prefix when building fetch URLs (rust-alc-api routes are nested under /api)", () => {
+    const html = renderAdminNotifyPage(ORIGIN);
+    expect(html).toContain("ALC_API + '/api' + path");
+  });
+
   it("shows directory.read scope guidance when LINE WORKS returns 403", () => {
     const html = renderAdminNotifyPage(ORIGIN);
     expect(html).toContain("directory.read");

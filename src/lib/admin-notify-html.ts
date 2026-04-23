@@ -124,7 +124,7 @@ export function renderAdminNotifyPage(alcApiOrigin: string): string {
       'Authorization': 'Bearer ' + token,
       'Content-Type': opts.body ? 'application/json' : undefined,
     });
-    return fetch(ALC_API + path, opts);
+    return fetch(ALC_API + '/api' + path, opts);
   }
   function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function showAlert(kind, msg) {
