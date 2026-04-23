@@ -44,6 +44,19 @@ describe("renderAdminNotifyPage", () => {
     expect(html).toContain("/notify/recipients");
     expect(html).toContain("/notify/recipients/bulk");
     expect(html).toContain("/notify/groups");
+    expect(html).toContain("/notify/test-distribute");
+  });
+
+  it("renders a per-recipient テスト送信 button with rec-test class", () => {
+    const html = renderAdminNotifyPage(ORIGIN);
+    expect(html).toContain("rec-test");
+    expect(html).toContain("テスト送信");
+  });
+
+  it("sends a fixed message template including [テスト通知] prefix", () => {
+    const html = renderAdminNotifyPage(ORIGIN);
+    expect(html).toContain("[テスト通知]");
+    expect(html).toContain("recipient_ids: [id]");
   });
 
   it("prepends /api prefix when building fetch URLs (rust-alc-api routes are nested under /api)", () => {

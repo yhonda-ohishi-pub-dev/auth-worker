@@ -226,12 +226,13 @@ export function renderAdminNotifyPage(alcApiOrigin: string): string {
     }
     body.innerHTML = recipients.map(function(r){
       var id = r.lineworks_user_id || r.line_user_id || r.phone_number || r.email || '';
+      var testBtn = '<button class="btn btn-gray btn-sm rec-test" data-id="' + r.id + '" data-name="' + esc(r.name) + '"' + (r.enabled ? '' : ' disabled title="有効化してから実行してください"') + '>テスト送信</button>';
       return '<tr>' +
         '<td>' + esc(r.name) + '</td>' +
         '<td>' + esc(r.provider) + '</td>' +
         '<td><code>' + esc(id) + '</code></td>' +
         '<td><input type="checkbox" class="rec-enable" data-id="' + r.id + '" ' + (r.enabled ? 'checked' : '') + '></td>' +
-        '<td><button class="btn btn-red btn-sm rec-delete" data-id="' + r.id + '">削除</button></td>' +
+        '<td>' + testBtn + ' <button class="btn btn-red btn-sm rec-delete" data-id="' + r.id + '">削除</button></td>' +
         '</tr>';
     }).join('');
     document.querySelectorAll('.rec-enable').forEach(function(cb){
@@ -241,6 +242,30 @@ export function renderAdminNotifyPage(alcApiOrigin: string): string {
           body: JSON.stringify({ enabled: cb.checked }),
         });
         if (!res.ok) { showAlert('error', '更新失敗'); cb.checked = !cb.checked; }
+      });
+    });
+    document.querySelectorAll('.rec-test').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        var id = btn.dataset.id;
+        var name = btn.dataset.name || '';
+        if (!confirm(name + ' にテスト通知を送信しますか？')) return;
+        btn.disabled = true;
+        try {
+          var message = '[テスト通知] これは通知機能の疎通確認メッセージです (' + new Date().toLocaleString('ja-JP') + ')';
+          var res = await api('/notify/test-distribute', {
+            method: 'POST',
+            body: JSON.stringify({ message: message, recipient_ids: [id] }),
+          });
+          if (!res.ok) { showAlert('error', 'テスト送信失敗: HTTP ' + res.status); return; }
+          var data = await res.json();
+          if (data.sent > 0) {
+            showAlert('success', 'テスト送信完了: ' + name + ' に配信しました');
+          } else {
+            showAlert('warn', 'テスト送信は試行されましたが配信できませんでした (sent=0, failed=' + (data.failed || 0) + ')');
+          }
+        } finally {
+          btn.disabled = false;
+        }
       });
     });
     document.querySelectorAll('.rec-delete').forEach(function(btn){
