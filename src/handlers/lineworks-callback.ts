@@ -65,9 +65,10 @@ export async function handleLineworksCallback(
         const token = frag.get("token");
         if (token) {
           const tenantId = extractTenantId(token);
+          const email = extractEmail(token);
           const redirectOrigin = new URL(redirectUri).origin;
-          if (!(await checkOrgAccess(env, redirectOrigin, tenantId))) {
-            console.log(JSON.stringify({ event: "lw_login_acl_denied", redirectUri, tenantId }));
+          if (!(await checkOrgAccess(env, redirectOrigin, tenantId, email))) {
+            console.log(JSON.stringify({ event: "lw_login_acl_denied", redirectUri, tenantId, email }));
             return new Response("このアプリへのアクセスが許可されていません", { status: 403 });
           }
           headers["Set-Cookie"] = setAuthCookie(token, new URL(request.url).hostname);
@@ -89,14 +90,15 @@ export async function handleLineworksCallback(
       expires_at: authData.expires_at,
     });
 
-    // Extract org_id from JWT payload
+    // Extract org_id + email from JWT payload
     const tenantId = extractTenantId(authData.token);
+    const email = extractEmail(authData.token);
     if (tenantId) fragment.set("org_id", tenantId);
 
-    // Enforce per-org tenant ACL before issuing the final redirect.
+    // Enforce per-org ACL before issuing the final redirect.
     const redirectOrigin = new URL(redirectUri).origin;
-    if (!(await checkOrgAccess(env, redirectOrigin, tenantId))) {
-      console.log(JSON.stringify({ event: "lw_login_acl_denied", redirectUri, tenantId }));
+    if (!(await checkOrgAccess(env, redirectOrigin, tenantId, email))) {
+      console.log(JSON.stringify({ event: "lw_login_acl_denied", redirectUri, tenantId, email }));
       return new Response("このアプリへのアクセスが許可されていません", { status: 403 });
     }
 
@@ -154,6 +156,17 @@ function extractTenantId(token: string): string {
   try {
     const payload = JSON.parse(atob(payloadB64));
     return payload.tenant_id || payload.org || "";
+  } catch {
+    return "";
+  }
+}
+
+function extractEmail(token: string): string {
+  const payloadB64 = token.split(".")[1];
+  if (!payloadB64) return "";
+  try {
+    const payload = JSON.parse(atob(payloadB64));
+    return payload.email || "";
   } catch {
     return "";
   }

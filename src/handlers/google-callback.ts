@@ -95,23 +95,25 @@ export async function handleGoogleCallback(
     expires_at: expiresAt,
   });
 
-  // Extract org_id from JWT payload
+  // Extract org_id + email from JWT payload
   let tenantId = "";
+  let email = "";
   const payloadB64 = token.split(".")[1];
   if (payloadB64) {
     try {
       const payload = JSON.parse(atob(payloadB64));
       tenantId = payload.tenant_id || payload.org || "";
+      email = payload.email || "";
       fragment.set("org_id", tenantId);
     } catch {
       // ignore decode error
     }
   }
 
-  // Enforce per-org tenant ACL for the final redirect target.
+  // Enforce per-org ACL for the final redirect target.
   const redirectOrigin = new URL(redirectUri).origin;
-  if (!(await checkOrgAccess(env, redirectOrigin, tenantId))) {
-    console.log(JSON.stringify({ event: "google_login_acl_denied", redirectUri, tenantId }));
+  if (!(await checkOrgAccess(env, redirectOrigin, tenantId, email))) {
+    console.log(JSON.stringify({ event: "google_login_acl_denied", redirectUri, tenantId, email }));
     return new Response("このアプリへのアクセスが許可されていません", { status: 403 });
   }
 
