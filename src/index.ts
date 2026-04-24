@@ -47,6 +47,12 @@ export interface Env {
    *  `{"ohishi-exp":["<uuid-1>","<uuid-2>"]}`.
    *  Missing / malformed → deny all ohishi-exp access (fail-closed). */
   TENANT_ACL?: string;
+  /** JSON map of github-org → allowlisted user emails (lowercase). Example:
+   *  `{"ohishi-exp":["alice@example.com"]}`.
+   *  OR-composed with TENANT_ACL: a request is allowed if *either* the
+   *  tenant_id or the email is in its org's allowlist. Useful when the
+   *  tenant_id is not stable (e.g. staging DB with volatile UUIDs). */
+  USER_ACL?: string;
   /** When set, /login delegates OAuth to the given auth-worker origin instead of
    *  running OAuth locally. Used by /wt-quick worktree tunnels whose random
    *  `*.trycloudflare.com` URLs cannot be registered in Google OAuth console. */

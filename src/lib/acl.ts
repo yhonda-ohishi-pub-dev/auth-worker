@@ -1,43 +1,46 @@
 /**
  * Org-based access control.
  *
- * Combines three KV/secret inputs to decide whether a given tenant may
- * access a given origin URL:
- *
+ * Inputs:
  *   - `origins:wt` (KV) — ephemeral worktree tunnels, always bypass ACL
  *   - `app-orgs` (KV JSON) — origin URL → github-org classification
  *   - `TENANT_ACL` (Worker secret JSON) — per-org allowlisted tenant_ids
+ *   - `USER_ACL` (Worker secret JSON) — per-org allowlisted user emails
  *
  * Used by /top (tile filtering) and the OAuth callback handlers (redirect
  * authorization).
+ *
+ * TENANT_ACL and USER_ACL are OR-composed: a request passes when *either*
+ * the tenant_id or the email is on its org's allowlist. Either secret may
+ * be missing; at least one must match for non-bypassed origins.
  */
 
 import type { Env } from "../index";
 import { classifyOrigin, isWorktreeOrigin } from "./config";
 
 /**
- * Returns true iff `tenantId` is allowed to access `origin`.
+ * Returns true iff (`tenantId`, `email`) is allowed to access `origin`.
  *
  * - wt-registered tunnels: always allowed (dev bypass)
  * - ippoan / unclassified origins: always allowed
- * - ohishi-exp origins: allowed only when tenantId is in TENANT_ACL["ohishi-exp"]
+ * - ohishi-exp origins: allowed when tenantId ∈ TENANT_ACL["ohishi-exp"]
+ *   OR email ∈ USER_ACL["ohishi-exp"] (either list may be empty/missing)
  *
- * Missing or malformed TENANT_ACL is treated as `{}` (fail-closed: every
- * ohishi-exp access is denied).
+ * Missing / malformed secrets are treated as empty allowlists (fail-closed
+ * when both are empty).
  */
 export async function checkOrgAccess(
   env: Env,
   origin: string,
   tenantId: string,
+  email?: string,
 ): Promise<boolean> {
   if (await isWorktreeOrigin(env, origin)) return true;
 
   const org = await classifyOrigin(env, origin);
   if (org !== "ohishi-exp") return true;
 
-  if (!tenantId) return false;
-  const allowed = allowlistFor(env, "ohishi-exp");
-  return allowed.includes(tenantId);
+  return matchesOrgAllowlist(env, org, tenantId, email);
 }
 
 /**
@@ -48,15 +51,32 @@ export function isTenantInOrgAllowlist(
   env: Env,
   org: string,
   tenantId: string,
+  email?: string,
 ): boolean {
-  if (!tenantId) return false;
-  return allowlistFor(env, org).includes(tenantId);
+  return matchesOrgAllowlist(env, org, tenantId, email);
 }
 
-function allowlistFor(env: Env, org: string): string[] {
-  if (!env.TENANT_ACL) return [];
+function matchesOrgAllowlist(
+  env: Env,
+  org: string,
+  tenantId: string,
+  email?: string,
+): boolean {
+  if (tenantId) {
+    const tenants = listFor(env.TENANT_ACL, org);
+    if (tenants.includes(tenantId)) return true;
+  }
+  if (email) {
+    const users = listFor(env.USER_ACL, org).map((e) => e.toLowerCase());
+    if (users.includes(email.toLowerCase())) return true;
+  }
+  return false;
+}
+
+function listFor(secret: string | undefined, org: string): string[] {
+  if (!secret) return [];
   try {
-    const parsed = JSON.parse(env.TENANT_ACL) as Record<string, string[]>;
+    const parsed = JSON.parse(secret) as Record<string, string[]>;
     const list = parsed[org];
     return Array.isArray(list) ? list : [];
   } catch {

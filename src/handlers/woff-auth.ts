@@ -58,22 +58,24 @@ export async function handleWoffAuth(
 
   const data = await resp.json() as { token: string; expires_at: string };
 
-  // Extract org_id from JWT payload
+  // Extract org_id + email from JWT payload
   let orgId = "";
+  let email = "";
   const payloadB64 = data.token.split(".")[1];
   if (payloadB64) {
     try {
       const payload = JSON.parse(atob(payloadB64));
       orgId = payload.tenant_id || payload.org || "";
+      email = payload.email || "";
     } catch {
       // ignore decode error
     }
   }
 
-  // Enforce per-org tenant ACL. WOFF returns JSON, so reject with CORS JSON.
+  // Enforce per-org ACL. WOFF returns JSON, so reject with CORS JSON.
   const redirectOrigin = new URL(redirectUri).origin;
-  if (!(await checkOrgAccess(env, redirectOrigin, orgId))) {
-    console.log(JSON.stringify({ event: "woff_auth_acl_denied", domainId, orgId }));
+  if (!(await checkOrgAccess(env, redirectOrigin, orgId, email))) {
+    console.log(JSON.stringify({ event: "woff_auth_acl_denied", domainId, orgId, email }));
     return corsJsonResponse({ error: "このアプリへのアクセスが許可されていません" }, 403);
   }
 

@@ -34,16 +34,19 @@ function originToApp(origin: string): AppEntry {
   return { name: origin, url: origin, icon: "App", description: "" };
 }
 
-function tenantIdFromCookie(request: Request): string {
+function claimsFromCookie(request: Request): { tenantId: string; email: string } {
   const token = getAuthCookie(request);
-  if (!token) return "";
+  if (!token) return { tenantId: "", email: "" };
   const payloadB64 = token.split(".")[1];
-  if (!payloadB64) return "";
+  if (!payloadB64) return { tenantId: "", email: "" };
   try {
     const payload = JSON.parse(atob(payloadB64));
-    return payload.tenant_id || payload.org || "";
+    return {
+      tenantId: payload.tenant_id || payload.org || "",
+      email: payload.email || "",
+    };
   } catch {
-    return "";
+    return { tenantId: "", email: "" };
   }
 }
 
@@ -70,7 +73,7 @@ export async function handleTopPage(
   console.log(JSON.stringify({ event: "top_page" }));
 
   const requestOrigin = url.origin;
-  const tenantId = tenantIdFromCookie(request);
+  const { tenantId, email } = claimsFromCookie(request);
 
   const apps = (await getDisplayOrigins(env))
     .split(",")
@@ -93,7 +96,7 @@ export async function handleTopPage(
   const visibleApps: AppEntry[] = [];
   for (const app of uniqueApps) {
     const org = await classifyOrigin(env, app.url);
-    if (org === "ohishi-exp" && !isTenantInOrgAllowlist(env, "ohishi-exp", tenantId)) {
+    if (org === "ohishi-exp" && !isTenantInOrgAllowlist(env, "ohishi-exp", tenantId, email)) {
       continue;
     }
     visibleApps.push(app);
