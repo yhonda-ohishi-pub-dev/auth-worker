@@ -25,12 +25,16 @@ export async function handleEgovRedirect(
   const url = new URL(request.url);
   const redirectUri = url.searchParams.get("redirect_uri");
   const idpHint = url.searchParams.get("idp_hint") ?? undefined;
+  // OIDC `prompt` param (login / consent / none / select_account) をそのまま透過する。
+  // e-Gov Keycloak に既存 SSO cookie がある場合、kc_idp_hint が無視されて自動ログイン
+  // されるため、別 IdP (例: GビズID) へ切替えたい時は prompt=login を明示する。
+  const prompt = url.searchParams.get("prompt") ?? undefined;
 
   if (!redirectUri || !isAllowedRedirectUri(redirectUri, await getAllowedOrigins(env))) {
     return new Response("Invalid or missing redirect_uri", { status: 400 });
   }
 
-  console.log(JSON.stringify({ event: "egov_redirect", redirectUri, idpHint }));
+  console.log(JSON.stringify({ event: "egov_redirect", redirectUri, idpHint, prompt }));
 
   const { codeVerifier, codeChallenge } = await generatePKCE();
 
@@ -48,6 +52,9 @@ export async function handleEgovRedirect(
   });
   if (idpHint) {
     authUrl += (authUrl.includes("?") ? "&" : "?") + "kc_idp_hint=" + encodeURIComponent(idpHint);
+  }
+  if (prompt) {
+    authUrl += (authUrl.includes("?") ? "&" : "?") + "prompt=" + encodeURIComponent(prompt);
   }
 
   return Response.redirect(authUrl, 302);

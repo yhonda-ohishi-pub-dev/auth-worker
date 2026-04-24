@@ -87,4 +87,24 @@ describe("handleEgovRedirect", () => {
     const res = await handleEgovRedirect(req, env);
     expect(res.headers.get("Location")!).not.toContain("kc_idp_hint");
   });
+
+  it("forwards prompt=login to force re-auth", async () => {
+    const env = createMockEnv(EGOV_ENV);
+    const req = new Request(
+      "https://auth.test.example/oauth/egov/redirect?redirect_uri=https://app1.test.example/callback&idp_hint=gbizid&prompt=login",
+    );
+    const res = await handleEgovRedirect(req, env);
+    const location = res.headers.get("Location")!;
+    expect(location).toContain("kc_idp_hint=gbizid");
+    expect(location).toContain("prompt=login");
+  });
+
+  it("omits prompt when not passed", async () => {
+    const env = createMockEnv(EGOV_ENV);
+    const req = new Request(
+      "https://auth.test.example/oauth/egov/redirect?redirect_uri=https://app1.test.example/callback",
+    );
+    const res = await handleEgovRedirect(req, env);
+    expect(res.headers.get("Location")!).not.toContain("prompt=");
+  });
 });
