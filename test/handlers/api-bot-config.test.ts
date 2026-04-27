@@ -14,7 +14,10 @@ import {
   handleBotConfigList,
   handleBotConfigUpsert,
   handleBotConfigDelete,
+  handleBotConfigExport,
+  handleBotConfigImport,
 } from "../../src/handlers/api-bot-config";
+import { makeJwt } from "../helpers/live-env";
 
 afterAll(() => restoreFetch());
 waitIfLive();
@@ -416,4 +419,94 @@ describe("handleBotConfigDelete", () => {
     expect(typeof data.error).toBe("string");
   });
 
+});
+
+// ---------- handleBotConfigExport ----------
+
+describe("handleBotConfigExport", () => {
+  const env = testEnv();
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("returns 401 without token", async () => {
+    const req = noAuthRequest(
+      "/api/bot-config/export?tenant_id=11111111-1111-1111-1111-111111111111",
+      "GET",
+    );
+    const res = await handleBotConfigExport(req, env);
+    expect(res.status).toBe(401);
+  });
+
+  it("forwards JSON with Content-Disposition on success", async () => {
+    stubOrReal(
+      new Response(
+        JSON.stringify({
+          version: 1,
+          tenant_id: "abc",
+          data: { bot_configs: [] },
+        }),
+        { status: 200 },
+      ),
+    );
+    const req = authRequest(
+      "/api/bot-config/export?tenant_id=11111111-1111-1111-1111-111111111111",
+      { method: "GET" },
+    );
+    const res = await handleBotConfigExport(req, env);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Disposition") || "").toContain("attachment");
+  });
+
+  it("passes through error status from backend", async () => {
+    stubOrReal(new Response("forbidden", { status: 403 }));
+    const req = authRequest(
+      "/api/bot-config/export?tenant_id=11111111-1111-1111-1111-111111111111",
+      { method: "GET" },
+    );
+    const res = await handleBotConfigExport(req, env);
+    expect(res.status).toBe(403);
+    const data = (await res.json()) as { error: string };
+    expect(typeof data.error).toBe("string");
+  });
+});
+
+// ---------- handleBotConfigImport ----------
+
+describe("handleBotConfigImport", () => {
+  const env = testEnv();
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("returns 401 without token", async () => {
+    const req = noAuthJsonRequest("/api/bot-config/import", { x: 1 });
+    const res = await handleBotConfigImport(req, env);
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 400 on empty body", async () => {
+    const req = new Request("https://auth.test.example/api/bot-config/import", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${makeJwt()}` },
+    });
+    const res = await handleBotConfigImport(req, env);
+    expect(res.status).toBe(400);
+  });
+
+  it("forwards body to staging /api/staging/import and proxies response", async () => {
+    stubOrReal(
+      new Response(JSON.stringify({ tenant: 1, bot_configs: 1 }), { status: 200 }),
+    );
+    const req = authJsonRequest("/api/bot-config/import", {
+      data: { tenant: { id: "abc", name: "T", slug: null, email_domain: null, created_at: "2025-01-01" } },
+    });
+    const res = await handleBotConfigImport(req, env);
+    expect(res.status).toBe(200);
+    const data = (await res.json()) as { tenant: number; bot_configs: number };
+    expect(data.bot_configs).toBe(1);
+  });
+
+  it("passes through error status from staging backend", async () => {
+    stubOrReal(new Response("staging mode disabled", { status: 404 }));
+    const req = authJsonRequest("/api/bot-config/import", { data: {} });
+    const res = await handleBotConfigImport(req, env);
+    expect(res.status).toBe(404);
+  });
 });
