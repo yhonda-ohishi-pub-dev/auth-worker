@@ -467,6 +467,14 @@ describe("handleBotConfigExport", () => {
     const data = (await res.json()) as { error: string };
     expect(typeof data.error).toBe("string");
   });
+
+  it("returns 400 when tenant_id query param is missing", async () => {
+    const req = authRequest("/api/bot-config/export", { method: "GET" });
+    const res = await handleBotConfigExport(req, env);
+    expect(res.status).toBe(400);
+    const data = (await res.json()) as { error: string };
+    expect(data.error).toBe("tenant_id is required");
+  });
 });
 
 // ---------- handleBotConfigImport ----------
@@ -508,5 +516,15 @@ describe("handleBotConfigImport", () => {
     const req = authJsonRequest("/api/bot-config/import", { data: {} });
     const res = await handleBotConfigImport(req, env);
     expect(res.status).toBe(404);
+  });
+
+  it("falls back to application/json when staging response lacks Content-Type", async () => {
+    const stagingResp = new Response("", { status: 200 });
+    stagingResp.headers.delete("Content-Type");
+    stubOrReal(stagingResp);
+    const req = authJsonRequest("/api/bot-config/import", { data: {} });
+    const res = await handleBotConfigImport(req, env);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("application/json");
   });
 });
