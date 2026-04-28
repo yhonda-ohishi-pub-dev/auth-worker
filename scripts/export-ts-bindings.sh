@@ -64,10 +64,25 @@ HEADER
 
 echo "" >> "$OUTPUT"
 
-# Collect all export type lines, deduplicate by type name (includes JsonValue from serde_json/)
-find "$TMPDIR/bindings" -name "*.ts" -print0 | sort -z | while IFS= read -r -d '' f; do
-  grep "^export type" "$f"
-done | awk -F'[ =]' '!seen[$3]++' >> "$OUTPUT"
+# Collect all export type definitions (handling multi-line types with embedded
+# /** doc comments */ that ts-rs emits for fields with /// comments), deduplicate
+# by type name (includes JsonValue from serde_json/).
+find "$TMPDIR/bindings" -name "*.ts" -print0 | sort -z | xargs -0 awk '
+  BEGIN { in_type = 0; skip = 0 }
+  # File-level // comments (auto-gen header) — only outside a type definition
+  !in_type && /^\/\// { next }
+  # Blank lines outside type
+  !in_type && NF == 0 { next }
+  # Type start
+  !in_type && /^export type [A-Za-z0-9_]+/ {
+    match($0, /^export type [A-Za-z0-9_]+/)
+    name = substr($0, 13, RLENGTH - 12)
+    if (seen[name]) skip = 1; else { seen[name] = 1; skip = 0 }
+    in_type = 1
+  }
+  in_type && !skip { print }
+  in_type && /};[ \t]*$/ { in_type = 0; skip = 0 }
+' >> "$OUTPUT"
 
 echo "" >> "$OUTPUT"
 cat >> "$OUTPUT" << 'WRAPPERS'
