@@ -131,6 +131,9 @@ export function renderAdminNotifyPage(alcApiOrigin: string): string {
     document.getElementById('alert').innerHTML = '<div class="alert alert-' + kind + '">' + esc(msg) + '</div>';
     if (kind !== 'error') setTimeout(function(){ document.getElementById('alert').innerHTML = ''; }, 5000);
   }
+  function showAlertHtml(kind, html) {
+    document.getElementById('alert').innerHTML = '<div class="alert alert-' + kind + '">' + html + '</div>';
+  }
 
   // --- Tabs ---
   document.querySelectorAll('.tab').forEach(function(btn){
@@ -209,7 +212,25 @@ export function renderAdminNotifyPage(alcApiOrigin: string): string {
     });
     if (!res.ok) { showAlert('error', '一括登録失敗: HTTP ' + res.status); return; }
     var body = await res.json();
-    showAlert('success', '登録完了: ' + body.created + ' 件追加 / ' + body.updated + ' 件更新 / ' + (body.skipped || []).length + ' 件スキップ');
+    var skipped = body.skipped || [];
+    var summary = '登録完了: ' + body.created + ' 件追加 / ' + body.updated + ' 件更新';
+    if (skipped.length === 0) {
+      showAlert('success', summary);
+    } else {
+      var reasonLabel = {
+        missing_lineworks_user_id: 'LINE WORKS user_id 欠落',
+        db_error: 'DB エラー (FK 違反等。再ログインしてやり直してください)',
+      };
+      var listHtml = skipped.map(function(s){
+        var u = selected[s.index];
+        var name = u ? (u.name || u.email || u.lineworks_user_id) : ('行 ' + s.index);
+        var label = reasonLabel[s.reason] || s.reason;
+        return '<li>' + esc(name) + ': ' + esc(label) + '</li>';
+      }).join('');
+      showAlertHtml('warn',
+        esc(summary) + ' / ' + skipped.length + ' 件スキップ' +
+        '<ul style="margin: 0.5rem 0 0 1.5rem; font-size: 0.85em;">' + listHtml + '</ul>');
+    }
     loadLineworksUsers();
   });
 
