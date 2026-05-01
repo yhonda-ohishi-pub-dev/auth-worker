@@ -32,7 +32,7 @@ describe("handleAdminSsoPage", () => {
 
     await handleAdminSsoPage(request, env);
 
-    expect(renderAdminSsoPage).toHaveBeenCalledWith(["https://app1.example"]);
+    expect(renderAdminSsoPage).toHaveBeenCalledWith(["https://app1.example"], "/top");
   });
 
   it("handles empty ALLOWED_REDIRECT_ORIGINS", async () => {
@@ -41,7 +41,53 @@ describe("handleAdminSsoPage", () => {
 
     await handleAdminSsoPage(request, env);
 
-    expect(renderAdminSsoPage).toHaveBeenCalledWith([]);
+    expect(renderAdminSsoPage).toHaveBeenCalledWith([], "/top");
+  });
+
+  it("uses ?from= as backUrl when origin is in allowlist", async () => {
+    const env = createMockEnv({
+      allowedOrigins: "https://app1.example,https://auth.test.example",
+    });
+    const request = new Request(
+      "https://auth.test.example/admin/sso?from=https%3A%2F%2Fapp1.example",
+    );
+
+    await handleAdminSsoPage(request, env);
+
+    expect(renderAdminSsoPage).toHaveBeenCalledWith(
+      ["https://app1.example"],
+      "https://app1.example",
+    );
+  });
+
+  it("falls back to /top when ?from= is not in allowlist", async () => {
+    const env = createMockEnv({
+      allowedOrigins: "https://app1.example,https://auth.test.example",
+    });
+    const request = new Request(
+      "https://auth.test.example/admin/sso?from=https%3A%2F%2Fevil.example",
+    );
+
+    await handleAdminSsoPage(request, env);
+
+    expect(renderAdminSsoPage).toHaveBeenCalledWith(["https://app1.example"], "/top");
+  });
+
+  it("allows ?from= matching AUTH_WORKER_ORIGIN itself", async () => {
+    const env = createMockEnv({
+      allowedOrigins: "https://app1.example,https://auth.test.example",
+    });
+    const request = new Request(
+      "https://auth.test.example/admin/sso?from=https%3A%2F%2Fauth.test.example",
+    );
+
+    await handleAdminSsoPage(request, env);
+
+    // frontendOrigins still excludes AUTH_WORKER_ORIGIN, but backUrl can use it
+    expect(renderAdminSsoPage).toHaveBeenCalledWith(
+      ["https://app1.example"],
+      "https://auth.test.example",
+    );
   });
 });
 

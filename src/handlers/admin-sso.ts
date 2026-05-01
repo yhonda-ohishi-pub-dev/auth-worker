@@ -11,15 +11,24 @@ import { getAllowedOrigins } from "../lib/config";
 
 /** GET /admin/sso — 常に HTML を返す（認証チェックは JS 側） */
 export async function handleAdminSsoPage(
-  _request: Request,
+  request: Request,
   env: Env,
 ): Promise<Response> {
   // KV allowlist (origins:<env> ∪ origins:dev) からフロントエンド URL を抽出（auth-worker 自身を除外）
-  const frontendOrigins = (await getAllowedOrigins(env))
+  const allOrigins = (await getAllowedOrigins(env))
     .split(",")
     .map((s: string) => s.trim())
-    .filter((s: string) => s && s !== env.AUTH_WORKER_ORIGIN);
-  const html = renderAdminSsoPage(frontendOrigins);
+    .filter((s: string) => s);
+  const frontendOrigins = allOrigins.filter(
+    (s: string) => s !== env.AUTH_WORKER_ORIGIN,
+  );
+
+  // ?from=<origin> を allowlist で完全一致検証してから戻るボタン href に使う（オープンリダイレクト防止）
+  const url = new URL(request.url);
+  const fromParam = url.searchParams.get("from") ?? "";
+  const backUrl = allOrigins.includes(fromParam) ? fromParam : "/top";
+
+  const html = renderAdminSsoPage(frontendOrigins, backUrl);
   return new Response(html, {
     headers: { "Content-Type": "text/html; charset=utf-8" },
   });

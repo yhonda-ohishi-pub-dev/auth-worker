@@ -22,4 +22,14 @@ describe("renderAdminSsoPage", () => {
     const result = renderAdminSsoPage(["https://app1.example.com", "https://app2.example.com"]);
     expect(result).toContain("app1.example.com");
   });
+
+  it("defaults back link href to /top", () => {
+    const result = renderAdminSsoPage([]);
+    expect(result).toContain('href="/top" class="back-link"');
+  });
+
+  it("uses backUrl in back link href", () => {
+    const result = renderAdminSsoPage([], "https://app1.example.com");
+    expect(result).toContain('href="https://app1.example.com" class="back-link"');
+  });
 });

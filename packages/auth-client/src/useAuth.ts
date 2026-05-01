@@ -356,7 +356,9 @@ export const useAuth = () => {
 
   /** auth-worker の設定ページ URL を取得 */
   function getSettingsUrl(): string {
-    return `${authWorkerUrl}/admin/sso`
+    const from = typeof window !== 'undefined' ? window.location.origin : ''
+    const qs = from ? `?from=${encodeURIComponent(from)}` : ''
+    return `${authWorkerUrl}/admin/sso${qs}`
   }
 
   // 組織一覧 + 切り替え

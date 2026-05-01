@@ -3,7 +3,10 @@
  * Single-page app with inline JS for JWT auth + API calls
  */
 
-export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
+export function renderAdminSsoPage(
+  frontendOrigins: string[] = [],
+  backUrl: string = "/top",
+): string {
   const originsJson = JSON.stringify(frontendOrigins);
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -138,7 +141,7 @@ export function renderAdminSsoPage(frontendOrigins: string[] = []): string {
 <body>
   <div class="page-wrapper">
   <div class="container">
-    <a href="${frontendOrigins[0] || 'javascript:history.back()'}" class="back-link">\u2190 \u623b\u308b</a>
+    <a href="${backUrl}" class="back-link">\u2190 \u623b\u308b</a>
     <div style="display:flex;justify-content:space-between;align-items:center;">
       <h1>SSO \u30d7\u30ed\u30d0\u30a4\u30c0\u8a2d\u5b9a</h1>
       <button class="btn btn-gray btn-sm" onclick="logout()">\u30ed\u30b0\u30a2\u30a6\u30c8</button>
